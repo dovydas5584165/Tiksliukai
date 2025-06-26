@@ -17,7 +17,6 @@ export default function RegistracijaPage() {
 
   const router = useRouter();
 
-  // Handle checkbox changes for pamokos
   const handlePamokosChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { value, checked } = e.target;
     if (checked) {
@@ -36,6 +35,12 @@ export default function RegistracijaPage() {
       setErrorMsg("Prašome pasirinkti rolę.");
       return;
     }
+
+    if (role !== "tutor" && !vaikoVardas.trim()) {
+      setErrorMsg("Prašome įvesti vaiko vardą.");
+      return;
+    }
+
     if (slaptazodis !== repeatSlaptazodis) {
       setErrorMsg("Slaptažodžiai nesutampa");
       return;
@@ -52,7 +57,7 @@ export default function RegistracijaPage() {
         body: JSON.stringify({
           vardas,
           pavarde,
-          vaikoVardas,
+          vaikoVardas: role === "tutor" ? null : vaikoVardas,
           pamokos,
           role,
           email,
@@ -66,7 +71,12 @@ export default function RegistracijaPage() {
         setSuccessMsg("Registracija sėkminga! Nukreipiame...");
         setTimeout(() => {
           if (role === "tutor") {
-            router.push(`/tutor_dashboard/${data.userId || ""}`);
+            if (data.userId) {
+              router.push(`/tutor_dashboard/${data.userId}`);
+            } else {
+              // fallback: no userId, push to general tutor dashboard or login
+              router.push("/tutor_dashboard");
+            }
           } else if (role === "client") {
             router.push("/student_dashboard");
           } else {
@@ -106,19 +116,39 @@ export default function RegistracijaPage() {
         <p
           style={{
             fontWeight: "bold",
-            textTransform: "lowercase",
             marginBottom: 20,
             fontSize: 18,
             textAlign: "center",
           }}
         >
-          registracija:
+          REGISTRACIJA:
         </p>
 
         <form
           onSubmit={handleSubmit}
           style={{ display: "flex", flexDirection: "column", gap: 12 }}
         >
+          <select
+            value={role}
+            onChange={(e) => setRole(e.target.value)}
+            required
+            style={{ padding: 10, borderRadius: 6, border: "1px solid #ccc" }}
+          >
+            <option value="">Pasirinkite rolę</option>
+            <option value="tutor">Mokytojas</option>
+            <option value="client">Klientas</option>
+          </select>
+
+          {role !== "tutor" && (
+            <input
+              type="text"
+              placeholder="Vaiko vardas"
+              value={vaikoVardas}
+              onChange={(e) => setVaikoVardas(e.target.value)}
+              required={role !== "tutor"}
+            />
+          )}
+
           <input
             type="text"
             placeholder="Vardas"
@@ -133,13 +163,6 @@ export default function RegistracijaPage() {
             onChange={(e) => setPavarde(e.target.value)}
             required
           />
-          <input
-            type="text"
-            placeholder="Vaiko vardas"
-            value={vaikoVardas}
-            onChange={(e) => setVaikoVardas(e.target.value)}
-            required
-          />
 
           <fieldset
             style={{
@@ -150,30 +173,24 @@ export default function RegistracijaPage() {
             }}
           >
             <legend style={{ fontWeight: "bold" }}>Pasirinkite pamokas:</legend>
-            {["Matematika", "Anglų kalba", "Programavimas", "Fizika"].map((lesson) => (
-              <label key={lesson} style={{ display: "block", marginBottom: 6, cursor: "pointer" }}>
-                <input
-                  type="checkbox"
-                  value={lesson}
-                  checked={pamokos.includes(lesson)}
-                  onChange={handlePamokosChange}
-                  style={{ marginRight: 8 }}
-                />
-                {lesson}
-              </label>
-            ))}
+            {["Matematika", "Anglų kalba", "Programavimas", "Fizika"].map(
+              (lesson) => (
+                <label
+                  key={lesson}
+                  style={{ display: "block", marginBottom: 6, cursor: "pointer" }}
+                >
+                  <input
+                    type="checkbox"
+                    value={lesson}
+                    checked={pamokos.includes(lesson)}
+                    onChange={handlePamokosChange}
+                    style={{ marginRight: 8 }}
+                  />
+                  {lesson}
+                </label>
+              )
+            )}
           </fieldset>
-
-          <select
-            value={role}
-            onChange={(e) => setRole(e.target.value)}
-            required
-            style={{ padding: 10, borderRadius: 6, border: "1px solid #ccc" }}
-          >
-            <option value="">Pasirinkite rolę</option>
-            <option value="tutor">Mokytojas</option>
-            <option value="client">Klientas</option>
-          </select>
 
           <input
             type="email"
@@ -213,15 +230,22 @@ export default function RegistracijaPage() {
         </form>
 
         {errorMsg && (
-          <p style={{ color: "red", marginTop: 10, textAlign: "center" }}>{errorMsg}</p>
+          <p style={{ color: "red", marginTop: 10, textAlign: "center" }}>
+            {errorMsg}
+          </p>
         )}
         {successMsg && (
-          <p style={{ color: "green", marginTop: 10, textAlign: "center" }}>{successMsg}</p>
+          <p style={{ color: "green", marginTop: 10, textAlign: "center" }}>
+            {successMsg}
+          </p>
         )}
 
         <p style={{ marginTop: 15, textAlign: "center", fontSize: 14 }}>
           Jau turite paskyrą?{" "}
-          <a href="/auth/log-in" style={{ color: "#0070f3", textDecoration: "underline" }}>
+          <a
+            href="/auth/log-in"
+            style={{ color: "#0070f3", textDecoration: "underline" }}
+          >
             Prisijunkite
           </a>
         </p>

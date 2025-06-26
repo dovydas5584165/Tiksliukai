@@ -13,24 +13,28 @@ export default function TutorDashboard() {
     { id: 3, date: "2025-07-05", topic: "Excel duomenų analizė", student: "Tomas" },
   ];
 
-  // Filtruojame pamokas pagal pasirinkta datą
-  const selectedDateISO = selectedDate.toISOString().slice(0, 10);
-  const lessonsOnSelectedDate = lessons.filter(lesson => lesson.date === selectedDateISO);
+  const formatDate = (dateStr: string) =>
+    new Date(dateStr).toLocaleDateString("lt-LT");
+
+  const selectedDateStr = selectedDate.toLocaleDateString("lt-LT");
+  const lessonsOnSelectedDate = lessons.filter(
+    lesson => formatDate(lesson.date) === selectedDateStr
+  );
 
   return (
     <div className="min-h-screen bg-gray-50 text-gray-900 font-sans flex flex-col">
+      
       {/* Header */}
       <header className="bg-white shadow-sm border-b border-gray-200 px-6 py-4 flex flex-col sm:flex-row justify-between items-center gap-4">
         <h1 className="text-2xl font-bold">Sveiki, mokytojau!</h1>
-        
         <div className="flex flex-wrap gap-3">
           <button className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition">
-            Įrašyti sąskaitos faktūrą
+            Įrašyti sąskaitą
           </button>
-          <button className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-green-700 transition">
+          <button className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition">
             Pridėti pamoką
           </button>
-          <button className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-purple-700 transition">
+          <button className="px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700 transition">
             Resursai
           </button>
         </div>
@@ -45,20 +49,21 @@ export default function TutorDashboard() {
           <Calendar
             onChange={setSelectedDate}
             value={selectedDate}
+            locale="lt-LT"
           />
         </section>
 
         {/* Pamokos pagal pasirinktą dieną */}
         <section className="bg-white rounded shadow p-6">
           <h2 className="text-xl font-semibold mb-4">
-            Pamokos {selectedDate.toLocaleDateString("lt-LT")}
+            Pamokos {selectedDateStr}
           </h2>
           {lessonsOnSelectedDate.length === 0 ? (
-            <p>Nėra pamokų šiai dienai.</p>
+            <p className="text-gray-600">Nėra suplanuotų pamokų šiai dienai.</p>
           ) : (
-            <ul>
+            <ul className="space-y-3">
               {lessonsOnSelectedDate.map(lesson => (
-                <li key={lesson.id} className="border-b border-gray-200 py-2">
+                <li key={lesson.id} className="border-b border-gray-200 pb-2">
                   <div><strong>Tema:</strong> {lesson.topic}</div>
                   <div><strong>Studentas:</strong> {lesson.student}</div>
                 </li>

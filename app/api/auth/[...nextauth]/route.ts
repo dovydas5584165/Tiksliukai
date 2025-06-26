@@ -1,4 +1,4 @@
- import NextAuth from "next-auth";
+import NextAuth from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import GithubProvider from "next-auth/providers/github";
 import { prisma } from "@/lib/prisma";
@@ -17,19 +17,30 @@ export const authOptions = {
         password: { label: "Password", type: "password" },
       },
       async authorize(credentials) {
-        if (!credentials) return null;
+        if (!credentials) {
+          console.log("No credentials provided");
+          return null;
+        }
 
         const user = await prisma.user.findUnique({
           where: { email: credentials.email },
         });
+        console.log("User found:", user);
 
-        if (!user) return null;
+        if (!user) {
+          console.log("User not found for email:", credentials.email);
+          return null;
+        }
 
-        const isValid = await compare(credentials.password, user.passwordHash);
+        const isValid = await compare(credentials.password, user.password);
+        console.log("Password valid:", isValid);
 
-        if (!isValid) return null;
+        if (!isValid) {
+          console.log("Invalid password for user:", credentials.email);
+          return null;
+        }
 
-        // Return safe user object:
+        // Return user data without password
         return {
           id: user.id,
           email: user.email,
@@ -38,9 +49,11 @@ export const authOptions = {
       },
     }),
   ],
+
   session: {
     strategy: "jwt",
   },
+
   callbacks: {
     async jwt({ token, user }) {
       if (user) {
@@ -49,6 +62,7 @@ export const authOptions = {
       }
       return token;
     },
+
     async session({ session, token }) {
       if (token) {
         session.user.id = token.id;
@@ -57,8 +71,9 @@ export const authOptions = {
       return session;
     },
   },
+
   pages: {
-    signIn: "/auth/log-in", // Your custom login page
+    signIn: "/auth/log-in", // your custom login page
   },
 };
 

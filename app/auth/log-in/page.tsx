@@ -1,4 +1,4 @@
- "use client";
+"use client";
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
@@ -6,7 +6,7 @@ import { signIn, getSession } from "next-auth/react";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
-  const [slaptazodis, setSlaptazodis] = useState("");
+  const [password, setPassword] = useState("");
   const [errorMsg, setErrorMsg] = useState("");
 
   const router = useRouter();
@@ -15,11 +15,10 @@ export default function LoginPage() {
     e.preventDefault();
     setErrorMsg("");
 
-    // Sign in user with credentials provider
     const result = await signIn("credentials", {
       redirect: false,
       email,
-      password: slaptazodis,
+      password,
     });
 
     if (result?.error) {
@@ -27,14 +26,19 @@ export default function LoginPage() {
       return;
     }
 
-    // Get session properly with getSession
     const session = await getSession();
     const role = session?.user?.role;
+    const userId = session?.user?.id;
+
+    if (!userId) {
+      setErrorMsg("Nepavyko nustatyti vartotojo ID");
+      return;
+    }
 
     if (role === "tutor") {
-      router.push("/tutor_dashboard");
+      router.push(`/tutor_dashboard/${userId}`);
     } else if (role === "client") {
-      router.push("/student_dashboard");
+      router.push(`/student_dashboard/${userId}`);
     } else {
       router.push("/");
     }
@@ -65,13 +69,12 @@ export default function LoginPage() {
         <p
           style={{
             fontWeight: "bold",
-            textTransform: "lowercase",
             marginBottom: 20,
             fontSize: 18,
             textAlign: "center",
           }}
         >
-          prisijungimas:
+          PRISIJUNGIMAS:
         </p>
 
         <form
@@ -84,14 +87,25 @@ export default function LoginPage() {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
+            autoComplete="email"
           />
           <input
             type="password"
             placeholder="Slaptažodis"
-            value={slaptazodis}
-            onChange={(e) => setSlaptazodis(e.target.value)}
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
             required
+            autoComplete="current-password"
           />
+
+          <div style={{ textAlign: "right", marginBottom: 12 }}>
+            <a
+              href="/forgot_pass"
+              style={{ color: "#0070f3", textDecoration: "underline", fontSize: 14 }}
+            >
+              Užmiršau slaptažodį?
+            </a>
+          </div>
 
           <button
             type="submit"
