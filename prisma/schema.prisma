@@ -1,10 +1,12 @@
+generator client {
+  provider = "prisma-client-js"
+  // Add previewFeatures if using native array support in older Prisma versions
+  // previewFeatures = ["postgresqlExtensions"]
+}
+
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
-}
-
-generator client {
-  provider = "prisma-client-js"
 }
 
 model User {
@@ -12,11 +14,10 @@ model User {
   email       String   @unique
   password    String
   name        String
-  vaikoVardas String?
-  pamokos     String  
-  role        String   
+  role        String
+  vaikoVardas String?    // Optional field
+  pamokos     String[]   // PostgreSQL native array
+
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 }
-
-
