@@ -25,23 +25,21 @@ export const authOptions: AuthOptions = {
         const user = await prisma.user.findUnique({
           where: { email: credentials.email },
         });
-        console.log("User found:", user);
 
         if (!user) {
-          console.log("User not found for email:", credentials.email);
+          console.log("User not found:", credentials.email);
           return null;
         }
 
         const isValid = await compare(credentials.password, user.password);
-        console.log("Password valid:", isValid);
-
         if (!isValid) {
-          console.log("Invalid password for user:", credentials.email);
+          console.log("Invalid password for:", credentials.email);
           return null;
         }
 
+        // ✅ Fix: Return id as string to match NextAuth User type
         return {
-          id: user.id,
+          id: user.id.toString(),
           email: user.email,
           role: user.role,
         };
@@ -64,8 +62,11 @@ export const authOptions: AuthOptions = {
 
     async session({ session, token }) {
       if (token) {
-        session.user.id = token.id as string;
-        session.user.role = token.role as string;
+        session.user = {
+          ...session.user,
+          id: token.id as string,
+          role: token.role as string,
+        };
       }
       return session;
     },
@@ -77,5 +78,4 @@ export const authOptions: AuthOptions = {
 };
 
 const handler = NextAuth(authOptions);
-
 export { handler as GET, handler as POST };
