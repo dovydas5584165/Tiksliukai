@@ -45,24 +45,30 @@ export default function RegistracijaPage() {
       setErrorMsg("Slaptažodžiai nesutampa");
       return;
     }
+
     if (pamokos.length === 0) {
       setErrorMsg("Prašome pasirinkti bent vieną pamoką.");
       return;
+    }
+
+    const requestBody: any = {
+      vardas,
+      pavarde,
+      pamokos,
+      role,
+      email,
+      slaptazodis,
+    };
+
+    if (role !== "tutor") {
+      requestBody.vaikoVardas = vaikoVardas;
     }
 
     try {
       const res = await fetch("/api/registration", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          vardas,
-          pavarde,
-          vaikoVardas: role === "tutor" ? null : vaikoVardas,
-          pamokos,
-          role,
-          email,
-          slaptazodis,
-        }),
+        body: JSON.stringify(requestBody),
       });
 
       const data = await res.json();
@@ -73,12 +79,11 @@ export default function RegistracijaPage() {
           if (role === "tutor") {
             if (data.userId) {
               router.push(`/tutor_dashboard/${data.userId}`);
-            } else {
-              // fallback: no userId, push to general tutor dashboard or login
-              router.push("/tutor_dashboard");
             }
           } else if (role === "client") {
-            router.push("/student_dashboard");
+            if (data.userId) {
+              router.push(`/student_dashboard/${data.userId}`);
+            }
           } else {
             router.push("/auth/log-in");
           }
