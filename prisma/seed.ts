@@ -1,5 +1,5 @@
 import { PrismaClient } from "@prisma/client";
-import bcrypt from "bcryptjs"; // ⬅ changed from "bcrypt" to "bcryptjs"
+import bcrypt from "bcryptjs";
 
 const prisma = new PrismaClient();
 
@@ -13,6 +13,9 @@ async function main() {
       email: "admin@example.com",
       password: hashedPassword,
       role: "ADMIN",
+      name: "Admin User",          // required field
+      vaikoVardas: "DefaultName",  // required field
+      pamokos: [],                 // required field (string array), empty by default
     },
   });
 
