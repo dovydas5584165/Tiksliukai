@@ -1,25 +1,22 @@
 import { PrismaClient } from "@prisma/client";
-import bcrypt from "bcrypt";
+import bcrypt from "bcryptjs"; // ⬅ changed from "bcrypt" to "bcryptjs"
 
 const prisma = new PrismaClient();
 
 async function main() {
-  // Hash password for demo user
-  const hashedPassword = await bcrypt.hash("password", 10);
+  const hashedPassword = await bcrypt.hash("admin123", 10);
 
-  // Upsert user to avoid duplicates on rerun
   await prisma.user.upsert({
-    where: { email: "test@example.com" },
+    where: { email: "admin@example.com" },
     update: {},
     create: {
-      email: "test@example.com",
+      email: "admin@example.com",
       password: hashedPassword,
-      role: "student",
-      name: "Dovydas Šilinskas",
-      vaikoVardas: "Vaiko Vardas",
-      // updatedAt will auto-update on each save, no need to set manually
+      role: "ADMIN",
     },
   });
+
+  console.log("Database seeded.");
 }
 
 main()
