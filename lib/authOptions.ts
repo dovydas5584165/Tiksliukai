@@ -1,8 +1,8 @@
-import NextAuth, { type AuthOptions } from "next-auth";
+import { supabase } from "@/lib/supabaseClient";
+import { compare } from "bcryptjs";
 import CredentialsProvider from "next-auth/providers/credentials";
 import GithubProvider from "next-auth/providers/github";
-import { prisma } from "@/lib/prisma";
-import { compare } from "bcryptjs";
+import type { AuthOptions } from "next-auth";
 
 export const authOptions: AuthOptions = {
   providers: [
@@ -17,27 +17,36 @@ export const authOptions: AuthOptions = {
         password: { label: "Password", type: "password" },
       },
       async authorize(credentials) {
-        if (!credentials) {
-          console.log("No credentials provided");
+        if (!credentials?.email || !credentials.password) {
+          console.log("Missing credentials");
           return null;
         }
 
-        const user = await prisma.user.findUnique({
-          where: { email: credentials.email },
-        });
+        const email = credentials.email.trim().toLowerCase();
+
+        const { data: user, error } = await supabase
+          .from("users")
+          .select("*")
+          .eq("email", email)
+          .single();
+
+        if (error) {
+          console.log("Supabase error fetching user:", error.message);
+          return null;
+        }
 
         if (!user) {
-          console.log("User not found:", credentials.email);
+          console.log("User not found:", email);
           return null;
         }
 
         const isValid = await compare(credentials.password, user.password);
+
         if (!isValid) {
-          console.log("Invalid password for:", credentials.email);
+          console.log("Invalid password for user:", email);
           return null;
         }
 
-        // ✅ Fix: Return id as string to match NextAuth User type
         return {
           id: user.id.toString(),
           email: user.email,
@@ -59,7 +68,6 @@ export const authOptions: AuthOptions = {
       }
       return token;
     },
-
     async session({ session, token }) {
       if (token) {
         session.user = {
@@ -76,6 +84,3 @@ export const authOptions: AuthOptions = {
     signIn: "/auth/log-in",
   },
 };
-
-const handler = NextAuth(authOptions);
-export { handler as GET, handler as POST };
