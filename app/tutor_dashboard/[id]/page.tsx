@@ -1,22 +1,40 @@
 "use client";
 
 import { useState } from "react";
-import Calendar from "react-calendar";
+import Calendar, { CalendarProps } from "react-calendar";
 import 'react-calendar/dist/Calendar.css';
 
-export default function TutorDashboard() {
-  const [selectedDate, setSelectedDate] = useState(new Date());
+type Lesson = {
+  id: number;
+  date: string; // format: YYYY-MM-DD
+  topic: string;
+  student: string;
+};
 
-  const lessons = [
+export default function TutorDashboard() {
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+
+  const lessons: Lesson[] = [
     { id: 1, date: "2025-07-01", topic: "Įvadas į R ir RStudio", student: "Dovydas" },
     { id: 2, date: "2025-07-03", topic: "Statistikos pagrindai", student: "Gabija" },
     { id: 3, date: "2025-07-05", topic: "Excel duomenų analizė", student: "Tomas" },
   ];
 
+  const handleDateChange: CalendarProps["onChange"] = (value) => {
+    if (value instanceof Date) {
+      setSelectedDate(value);
+    } else if (Array.isArray(value)) {
+      setSelectedDate(value[0] ?? new Date());
+    } else {
+      setSelectedDate(new Date());
+    }
+  };
+
   const formatDate = (dateStr: string) =>
     new Date(dateStr).toLocaleDateString("lt-LT");
 
   const selectedDateStr = selectedDate.toLocaleDateString("lt-LT");
+
   const lessonsOnSelectedDate = lessons.filter(
     lesson => formatDate(lesson.date) === selectedDateStr
   );
@@ -40,20 +58,20 @@ export default function TutorDashboard() {
         </div>
       </header>
 
-      {/* Main content */}
+      {/* Main Content */}
       <main className="flex-grow container mx-auto px-4 sm:px-8 py-8 grid grid-cols-1 md:grid-cols-2 gap-8">
         
-        {/* Kalendorius */}
+        {/* Calendar */}
         <section className="bg-white rounded shadow p-6">
           <h2 className="text-xl font-semibold mb-4">Kalendorius</h2>
           <Calendar
-            onChange={setSelectedDate}
+            onChange={handleDateChange}
             value={selectedDate}
             locale="lt-LT"
           />
         </section>
 
-        {/* Pamokos pagal pasirinktą dieną */}
+        {/* Lessons */}
         <section className="bg-white rounded shadow p-6">
           <h2 className="text-xl font-semibold mb-4">
             Pamokos {selectedDateStr}
