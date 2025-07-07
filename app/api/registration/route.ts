@@ -3,15 +3,16 @@ import { z } from "zod";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
 const payloadSchema = z.object({
-  email: z.string().email(),
+  email: z.string().email("Neteisingas el. pašto formatas"),
   slaptazodis: z.string().min(6, "Slaptažodis per trumpas (min 6)"),
-  vardas: z.string().min(1),
-  pavarde: z.string().min(1),
-  role: z.enum(["tutor", "client"]),
-  vaikoVardas: z.string().optional(),
+  vardas: z.string().min(1, "Vardas yra privalomas"),
+  pavarde: z.string().min(1, "Pavardė yra privaloma"),
+  role: z.enum(["tutor", "client"], {
+    errorMap: () => ({ message: "Rolė turi būti 'tutor' arba 'client'" }),
+  }),
+  vaikovardas: z.string().optional(),
   pamokos: z.array(z.string()).min(1, "Reikia pasirinkti bent vieną pamoką"),
 });
-type RegistrationPayload = z.infer<typeof payloadSchema>;
 
 export async function POST(req: Request) {
   try {
@@ -19,75 +20,59 @@ export async function POST(req: Request) {
     const parsed = payloadSchema.safeParse(json);
 
     if (!parsed.success) {
+      console.error("Validation error:", parsed.error.errors);
       return NextResponse.json(
         { message: parsed.error.errors[0].message },
         { status: 422 }
       );
     }
 
-    const { email, slaptazodis, vardas, pavarde, role, vaikoVardas, pamokos } =
+    const { email, slaptazodis, vardas, pavarde, role, vaikovardas, pamokos } =
       parsed.data;
 
-    const normalizedEmail = email.trim().toLowerCase();
+    console.log("Registration data:", {
+      email,
+      password_length: slaptazodis.length,
+      vardas,
+      pavarde,
+      role,
+      vaikovardas, // corrected consistent variable name here
+      pamokos,
+    });
 
-    // Check if user already exists
-    const { data: existingUser, error: lookupErr } = await supabaseAdmin
-      .from("users")
-      .select("id")
-      .eq("email", normalizedEmail)
-      .maybeSingle();
+    // Pass vaikovardas explicitly as null if undefined (Postgres expects null, not undefined)
+    const { data, error } = await supabaseAdmin.rpc("register_lt_user", {
+      email,
+      pamokos,
+      pavarde,
+      role,
+      slaptazodis,
+      vaikovardas: vaikovardas ?? null,
+      vardas,
+    });
 
-    if (lookupErr) {
-      console.error("Lookup error:", lookupErr);
-      return NextResponse.json({ message: "DB klaida" }, { status: 500 });
-    }
-
-    if (existingUser) {
+    if (error) {
+      console.error("Registration error from RPC:", error);
       return NextResponse.json(
-        { message: "Šis el. paštas jau užregistruotas." },
-        { status: 409 }
-      );
-    }
-
-    // ✅ FIXED: Correct property name
-    const { data: authData, error: signUpErr } =
-      await supabaseAdmin.auth.admin.createUser({
-        email: normalizedEmail,
-        password: slaptazodis,
-        email_confirmed: true,
-      });
-
-    if (signUpErr || !authData?.user) {
-      console.error("Auth user creation error:", signUpErr);
-      return NextResponse.json(
-        { message: signUpErr?.message ?? "Nepavyko sukurti vartotojo" },
+        { message: error.message || "Registracijos klaida" },
         { status: 400 }
       );
     }
 
-    // Insert profile into 'users' table
-    const userId = authData.user.id;
-    const { error: insertErr } = await supabaseAdmin.from("users").insert({
-      id: userId,
-      name: `${vardas} ${pavarde}`.trim(),
-      email: normalizedEmail,
-      role,
-      vaikoVardas: role === "client" ? vaikoVardas ?? null : null,
-      pamokos,
-    });
-
-    if (insertErr) {
-      console.error("Insert error:", insertErr);
-      // Rollback auth user on failure
-      await supabaseAdmin.auth.admin.deleteUser(userId);
+    if (!data || data.success !== true) {
+      console.error("Registration failed:", data);
       return NextResponse.json(
-        { message: "Klaida įrašant profilį" },
-        { status: 500 }
+        { message: data?.message || "Registracija nepavyko" },
+        { status: 400 }
       );
     }
 
     return NextResponse.json(
-      { userId, role, message: "Registracija sėkminga" },
+      {
+        userId: data.userId,
+        role: data.role,
+        message: data.message,
+      },
       { status: 201 }
     );
   } catch (err: any) {
