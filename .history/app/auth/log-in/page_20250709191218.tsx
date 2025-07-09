@@ -2,52 +2,77 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { supabase } from '../../../lib/supabaseClient'; // Correct relative path to lib
+import { signIn } from 'next-auth/react';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
+  const [loading, setLoading] = useState(false);
   const router = useRouter();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg('');
+    setLoading(true);
 
-    // Attempt to sign in with Supabase
-    const { data, error } = await supabase.auth.signInWithPassword({
+    console.log('Starting sign-in process');
+
+    const result = await signIn('credentials', {
+      redirect: false,
       email,
       password,
     });
 
-    if (error) {
-      setErrorMsg('Neteisingi prisijungimo duomenys');
+    setLoading(false);
+
+    console.log('signIn result:', result);
+
+    if (result?.error) {
+      setErrorMsg(`Prisijungimo klaida: ${result.error}`);
       return;
     }
 
-    if (!data.user) {
-      setErrorMsg('Nepavyko rasti vartotojo');
+    // Wait for session to update with a few retries
+    let retries = 5;
+    let session = null;
+
+    while (retries > 0) {
+      await new Promise((res) => setTimeout(res, 200)); // delay 200ms
+      const res = await fetch('/api/auth/session');
+      session = await res.json();
+
+      console.log('Fetched session:', session);
+
+      if (session?.user?.id && session?.user?.role) break;
+
+      retries--;
+    }
+
+    if (!session?.user?.id || !session?.user?.role) {
+      setErrorMsg('Nepavyko nustatyti vartotojo tapatybės');
+      console.error('Session missing userId or role:', session);
       return;
     }
 
-    // Assuming you store user role in user metadata or in your DB
-    // Here we fetch user role from user metadata or use a placeholder
-    const session = supabase.auth.getSession(); // async method, but you can also access user metadata
-    const userRole = data.user.user_metadata?.role || null; // example usage, depends on your setup
-    const userId = data.user.id;
+    const { id: userId, role } = session.user;
 
-    if (!userRole) {
-      setErrorMsg('Nepavyko nustatyti vartotojo rolės');
-      return;
-    }
+    console.log('Ready to redirect:', { userId, role });
 
-    // Redirect based on role
-    if (userRole === 'tutor') {
-      router.push(`/tutor_dashboard/${userId}`);
-    } else if (userRole === 'client') {
-      router.push(`/student_dashboard/${userId}`);
+    if (role && userId) {
+      if (role === 'tutor') {
+        console.log(`Redirecting to tutor dashboard /tutor_dashboard/${userId}`);
+        router.replace(`/tutor_dashboard/${userId}`);
+      } else if (role === 'client') {
+        console.log(`Redirecting to student dashboard /student_dashboard/${userId}`);
+        router.replace(`/student_dashboard/${userId}`);
+      } else {
+        setErrorMsg('Nežinoma vartotojo rolė');
+        console.error('Unknown role:', role);
+      }
     } else {
-      router.push('/');
+      setErrorMsg('Nepavyko nustatyti vartotojo rolės ar ID');
+      console.error('Missing role or userId', { role, userId });
     }
   };
 
@@ -105,24 +130,25 @@ export default function LoginPage() {
           />
 
           <div style={{ textAlign: 'right', marginBottom: 12 }}>
-            <a href="/auth/forgot_pass" style={{ color: '#0070f3', fontSize: 14, textDecoration: 'underline' }}>
+            <a href="/forgot_pass" style={{ color: '#0070f3', fontSize: 14, textDecoration: 'underline' }}>
               Užmiršau slaptažodį?
             </a>
           </div>
 
           <button
             type="submit"
+            disabled={loading}
             style={{
               padding: 12,
-              backgroundColor: '#0070f3',
+              backgroundColor: loading ? '#999' : '#0070f3',
               color: '#fff',
               fontWeight: 'bold',
               border: 'none',
               borderRadius: 8,
-              cursor: 'pointer',
+              cursor: loading ? 'not-allowed' : 'pointer',
             }}
           >
-            Prisijungti
+            {loading ? 'Kraunasi...' : 'Prisijungti'}
           </button>
         </form>
 

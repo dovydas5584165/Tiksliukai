@@ -105,7 +105,7 @@ export default function LoginPage() {
           />
 
           <div style={{ textAlign: 'right', marginBottom: 12 }}>
-            <a href="/auth/forgot_pass" style={{ color: '#0070f3', fontSize: 14, textDecoration: 'underline' }}>
+            <a href="/forgot_pass" style={{ color: '#0070f3', fontSize: 14, textDecoration: 'underline' }}>
               Užmiršau slaptažodį?
             </a>
           </div>

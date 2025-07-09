@@ -1,20 +1,17 @@
+// lib/authOptions.ts
 import CredentialsProvider from "next-auth/providers/credentials";
 import GithubProvider from "next-auth/providers/github";
 import type { AuthOptions } from "next-auth";
 import { createClient } from "@supabase/supabase-js";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
-if (!supabaseUrl || !supabaseAnonKey || !supabaseServiceRoleKey) {
+if (!supabaseUrl || !supabaseServiceRoleKey || !supabaseAnonKey) {
   throw new Error("Missing Supabase environment variables");
 }
 
-// Client for user auth
-const supabaseClient = createClient(supabaseUrl, supabaseAnonKey);
-
-// Admin client with elevated privileges (service role key)
 export const supabaseAdmin = createClient(supabaseUrl, supabaseServiceRoleKey);
 
 export const authOptions: AuthOptions = {
@@ -34,35 +31,44 @@ export const authOptions: AuthOptions = {
 
         const email = credentials.email.trim().toLowerCase();
 
-        // Use Supabase SDK for password sign-in
-        const { data, error } = await supabaseClient.auth.signInWithPassword({
-          email,
-          password: credentials.password,
-        });
+        const response = await fetch(
+          `${supabaseUrl}/auth/v1/token?grant_type=password`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              apikey: supabaseAnonKey,
+              Authorization: `Bearer ${supabaseAnonKey}`,
+            },
+            body: JSON.stringify({ email, password: credentials.password }),
+          }
+        );
 
-        if (error || !data.session || !data.user) {
-          console.error("Supabase sign-in error:", error);
+        const data = await response.json();
+
+        if (!response.ok || !data.access_token || !data.user) {
+          console.error("Supabase auth error:", data);
           return null;
         }
 
-        // Fetch user's role securely
+        const user = data.user as { id: string; email: string };
+
         const { data: profile, error: profileError } = await supabaseAdmin
           .from("users")
           .select("role")
-          .eq("id", data.user.id)
+          .eq("id", user.id)
           .single();
 
         if (profileError || !profile?.role) {
-          console.error("Error fetching user role:", profileError);
+          console.error("Profile fetch error or role missing:", profileError);
           return null;
         }
 
-        // Return user object to NextAuth
         return {
-          id: data.user.id,
-          email: data.user.email!,
+          id: user.id,
+          email: user.email,
           role: profile.role,
-          accessToken: data.session.access_token,
+          accessToken: data.access_token,
         };
       },
     }),

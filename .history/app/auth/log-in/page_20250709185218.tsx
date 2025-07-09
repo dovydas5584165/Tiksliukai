@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { supabase } from '../../../lib/supabaseClient'; // Correct relative path to lib
+import { signIn, getSession } from 'next-auth/react';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -14,37 +14,30 @@ export default function LoginPage() {
     e.preventDefault();
     setErrorMsg('');
 
-    // Attempt to sign in with Supabase
-    const { data, error } = await supabase.auth.signInWithPassword({
+    const result = await signIn('credentials', {
+      redirect: false,
       email,
       password,
     });
 
-    if (error) {
+    if (result?.error) {
       setErrorMsg('Neteisingi prisijungimo duomenys');
       return;
     }
 
-    if (!data.user) {
-      setErrorMsg('Nepavyko rasti vartotojo');
+    const session = await getSession();
+
+    const role = session?.user?.role;
+    const userId = session?.user?.id;
+
+    if (!userId || !role) {
+      setErrorMsg('Nepavyko nustatyti vartotojo tapatybės');
       return;
     }
 
-    // Assuming you store user role in user metadata or in your DB
-    // Here we fetch user role from user metadata or use a placeholder
-    const session = supabase.auth.getSession(); // async method, but you can also access user metadata
-    const userRole = data.user.user_metadata?.role || null; // example usage, depends on your setup
-    const userId = data.user.id;
-
-    if (!userRole) {
-      setErrorMsg('Nepavyko nustatyti vartotojo rolės');
-      return;
-    }
-
-    // Redirect based on role
-    if (userRole === 'tutor') {
+    if (role === 'tutor') {
       router.push(`/tutor_dashboard/${userId}`);
-    } else if (userRole === 'client') {
+    } else if (role === 'client') {
       router.push(`/student_dashboard/${userId}`);
     } else {
       router.push('/');
@@ -105,7 +98,7 @@ export default function LoginPage() {
           />
 
           <div style={{ textAlign: 'right', marginBottom: 12 }}>
-            <a href="/auth/forgot_pass" style={{ color: '#0070f3', fontSize: 14, textDecoration: 'underline' }}>
+            <a href="/forgot_pass" style={{ color: '#0070f3', fontSize: 14, textDecoration: 'underline' }}>
               Užmiršau slaptažodį?
             </a>
           </div>

@@ -2,52 +2,65 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { supabase } from '../../../lib/supabaseClient'; // Correct relative path to lib
+import { supabase } from '../lib/supabaseClient'; // adjust path as needed
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
+  const [loading, setLoading] = useState(false);
   const router = useRouter();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg('');
+    setLoading(true);
 
-    // Attempt to sign in with Supabase
-    const { data, error } = await supabase.auth.signInWithPassword({
+    // Step 1: sign in with Supabase
+    const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
 
-    if (error) {
-      setErrorMsg('Neteisingi prisijungimo duomenys');
+    if (signInError) {
+      setErrorMsg(`Prisijungimo klaida: ${signInError.message}`);
+      setLoading(false);
       return;
     }
 
-    if (!data.user) {
-      setErrorMsg('Nepavyko rasti vartotojo');
+    // Step 2: get current session (should be active now)
+    const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+
+    if (sessionError || !sessionData.session) {
+      setErrorMsg('Nepavyko nustatyti vartotojo tapatybės');
+      setLoading(false);
       return;
     }
 
-    // Assuming you store user role in user metadata or in your DB
-    // Here we fetch user role from user metadata or use a placeholder
-    const session = supabase.auth.getSession(); // async method, but you can also access user metadata
-    const userRole = data.user.user_metadata?.role || null; // example usage, depends on your setup
-    const userId = data.user.id;
+    const userId = sessionData.session.user.id;
 
-    if (!userRole) {
-      setErrorMsg('Nepavyko nustatyti vartotojo rolės');
+    // Step 3: fetch user role from 'users' table
+    const { data: profile, error: profileError } = await supabase
+      .from('users')
+      .select('role')
+      .eq('id', userId)
+      .single();
+
+    if (profileError || !profile?.role) {
+      setErrorMsg('Nepavyko gauti vartotojo rolės');
+      setLoading(false);
       return;
     }
 
-    // Redirect based on role
-    if (userRole === 'tutor') {
-      router.push(`/tutor_dashboard/${userId}`);
-    } else if (userRole === 'client') {
-      router.push(`/student_dashboard/${userId}`);
+    setLoading(false);
+
+    // Step 4: redirect based on role
+    if (profile.role === 'tutor') {
+      router.replace(`/tutor_dashboard/${userId}`);
+    } else if (profile.role === 'client') {
+      router.replace(`/student_dashboard/${userId}`);
     } else {
-      router.push('/');
+      setErrorMsg('Nežinoma vartotojo rolė');
     }
   };
 
@@ -105,24 +118,25 @@ export default function LoginPage() {
           />
 
           <div style={{ textAlign: 'right', marginBottom: 12 }}>
-            <a href="/auth/forgot_pass" style={{ color: '#0070f3', fontSize: 14, textDecoration: 'underline' }}>
+            <a href="/forgot_pass" style={{ color: '#0070f3', fontSize: 14, textDecoration: 'underline' }}>
               Užmiršau slaptažodį?
             </a>
           </div>
 
           <button
             type="submit"
+            disabled={loading}
             style={{
               padding: 12,
-              backgroundColor: '#0070f3',
+              backgroundColor: loading ? '#999' : '#0070f3',
               color: '#fff',
               fontWeight: 'bold',
               border: 'none',
               borderRadius: 8,
-              cursor: 'pointer',
+              cursor: loading ? 'not-allowed' : 'pointer',
             }}
           >
-            Prisijungti
+            {loading ? 'Kraunasi...' : 'Prisijungti'}
           </button>
         </form>
 
