@@ -16,43 +16,50 @@ const payloadSchema = z.object({
 
 export async function POST(req: Request) {
   try {
+    // Parse and validate incoming JSON payload
     const json = await req.json();
     const parsed = payloadSchema.safeParse(json);
 
     if (!parsed.success) {
-      console.error("Validation error:", parsed.error.errors);
       return NextResponse.json(
         { message: parsed.error.errors[0].message },
         { status: 422 }
       );
     }
 
-    const { email, slaptazodis, vardas, pavarde, role, vaikovardas, pamokos } =
-      parsed.data;
+    const { email, slaptazodis, vardas, pavarde, role, vaikovardas, pamokos } = parsed.data;
 
-    console.log("Registration data:", {
+    // Step 1: Create user in Supabase Auth via Admin API
+    const { data: userData, error: authError } = await supabaseAdmin.auth.admin.createUser({
       email,
-      password_length: slaptazodis.length,
-      vardas,
-      pavarde,
-      role,
-      vaikovardas, // corrected consistent variable name here
-      pamokos,
+      password: slaptazodis,
+      email_confirm: true,
+      user_metadata: { role, vardas, pavarde, vaikovardas },
     });
 
-    // Pass vaikovardas explicitly as null if undefined (Postgres expects null, not undefined)
-    const { data, error } = await supabaseAdmin.rpc("register_lt_user", {
+    if (authError || !userData) {
+      console.error("Auth creation failed:", authError);
+      return NextResponse.json(
+        { message: authError?.message || "Auth creation failed" },
+        { status: 400 }
+      );
+    }
+
+    // Step 2: Insert user profile and lessons using RPC
+    const { data, error } = await supabaseAdmin.rpc("register_lt_user_v1", {
+      uid: userData.user.id,
       email,
       pamokos,
       pavarde,
       role,
-      slaptazodis,
-      vaikovardas: vaikovardas ?? null,
+      vaiko_vardas: vaikovardas ?? null,
       vardas,
     });
 
     if (error) {
-      console.error("Registration error from RPC:", error);
+      console.error("RPC error:", error);
+      // Clean up created auth user if DB insert failed (optional but recommended)
+      await supabaseAdmin.auth.admin.deleteUser(userData.user.id);
       return NextResponse.json(
         { message: error.message || "Registracijos klaida" },
         { status: 400 }
@@ -60,13 +67,16 @@ export async function POST(req: Request) {
     }
 
     if (!data || data.success !== true) {
-      console.error("Registration failed:", data);
+      console.error("Registration failed (payload):", data);
+      // Also consider deleting auth user here
+      await supabaseAdmin.auth.admin.deleteUser(userData.user.id);
       return NextResponse.json(
         { message: data?.message || "Registracija nepavyko" },
         { status: 400 }
       );
     }
 
+    // Step 3: Success response with user ID and role
     return NextResponse.json(
       {
         userId: data.userId,
