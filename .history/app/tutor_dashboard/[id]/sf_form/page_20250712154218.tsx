@@ -70,14 +70,13 @@ export default function InvoiceGenerator() {
       const blob = pdf.output("blob");
       console.log("Blob type:", blob.type, "Is Blob?", blob instanceof Blob);
 
-
       /* Extract year and month for folder */
       const invoiceDate = new Date(data);
       const folder = `${invoiceDate.getFullYear()}-${(invoiceDate.getMonth() + 1)
         .toString()
         .padStart(2, "0")}`;
 
-      /* Create unique filename */
+      /* Create unique filename WITHOUT tutorId */
       const fileName = `${formatInvoiceNumber(invoiceNumber)}_${formattedDate.replace(/\./g, "-")}.pdf`;
 
       /* Upload path with folder */

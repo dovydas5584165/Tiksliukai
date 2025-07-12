@@ -70,23 +70,16 @@ export default function InvoiceGenerator() {
       const blob = pdf.output("blob");
       console.log("Blob type:", blob.type, "Is Blob?", blob instanceof Blob);
 
+      /* Get tutor ID - REPLACE this with your dynamic tutor id retrieval */
+      const tutorId = "TUTOR123";
 
-      /* Extract year and month for folder */
-      const invoiceDate = new Date(data);
-      const folder = `${invoiceDate.getFullYear()}-${(invoiceDate.getMonth() + 1)
-        .toString()
-        .padStart(2, "0")}`;
+      /* Create unique filename - no folder prefix */
+      const fileName = `${tutorId}_${formatInvoiceNumber(invoiceNumber)}_${formattedDate.replace(/\./g, "-")}.pdf`;
 
-      /* Create unique filename */
-      const fileName = `${formatInvoiceNumber(invoiceNumber)}_${formattedDate.replace(/\./g, "-")}.pdf`;
-
-      /* Upload path with folder */
-      const filePath = `${folder}/${fileName}`;
-
-      /* Upload to Supabase Storage - monthly folder */
-      const { data: uploadData, error } = await supabase.storage
+      /* Upload to Supabase Storage - flat (no folder) */
+      const { data, error } = await supabase.storage
         .from("invoices")
-        .upload(filePath, blob, {
+        .upload(fileName, blob, {
           cacheControl: "3600",
           upsert: true,
           contentType: "application/pdf",
@@ -98,7 +91,7 @@ export default function InvoiceGenerator() {
         return;
       }
 
-      console.log("Upload success:", uploadData);
+      console.log("Upload success:", data);
 
       /* Local download */
       pdf.save(fileName);
@@ -237,7 +230,7 @@ export default function InvoiceGenerator() {
           {/* Client & Seller */}
           <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 40 }}>
             <div style={{ width: "48%" }}>
-              <h3 style={{ borderBottom: "1px solid #ccc", paddingBottom: 4, marginBottom: 8 }}>
+              <h3 style={{ borderBottom: "1px solid #ccc", paddingBottom: 4, marginBottom:  8 }}>
                 Klientas
               </h3>
               <p style={{ margin: 0 }}>{klientas}</p>

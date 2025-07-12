@@ -167,19 +167,10 @@ export default function TutorDashboard() {
           )}
         </div>
         <div className="flex flex-wrap gap-3 items-center">
-          <button onClick={() => goTo("sf_form")} className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">Išrašyti sąskaitą</button>
+          <button onClick={() => goTo("sf_form")} className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">Įrašyti sąskaitą</button>
           <button onClick={() => goTo("add_lesson")} className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700">Pridėti pamoką</button>
           <button onClick={() => goTo("grades")} className="px-4 py-2 bg-yellow-600 text-white rounded hover:bg-yellow-700">Pridėti pažymį</button>
-
-          <a
-            href="https://drive.google.com/drive/folders/1uBSRCUxunwWaXNIIeAWP8keY1O5wlzm7?usp=share_link"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700 inline-block text-center"
-          >
-            Resursai
-          </a>
-
+          <button onClick={() => goTo("resources")} className="px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700">Resursai</button>
           <button onClick={handleLogout} className="px-4 py-2 border border-gray-300 rounded hover:bg-gray-100 text-gray-700">Atsijungti</button>
         </div>
       </header>

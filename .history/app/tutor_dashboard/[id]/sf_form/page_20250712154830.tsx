@@ -70,6 +70,8 @@ export default function InvoiceGenerator() {
       const blob = pdf.output("blob");
       console.log("Blob type:", blob.type, "Is Blob?", blob instanceof Blob);
 
+      /* Get tutor ID - REPLACE this with your dynamic tutor id retrieval */
+      const tutorId = "TUTOR123";
 
       /* Extract year and month for folder */
       const invoiceDate = new Date(data);
@@ -78,7 +80,7 @@ export default function InvoiceGenerator() {
         .padStart(2, "0")}`;
 
       /* Create unique filename */
-      const fileName = `${formatInvoiceNumber(invoiceNumber)}_${formattedDate.replace(/\./g, "-")}.pdf`;
+      const fileName = `${tutorId}_${formatInvoiceNumber(invoiceNumber)}_${formattedDate.replace(/\./g, "-")}.pdf`;
 
       /* Upload path with folder */
       const filePath = `${folder}/${fileName}`;

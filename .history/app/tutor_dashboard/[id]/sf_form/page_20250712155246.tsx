@@ -4,14 +4,18 @@ import React, { useState, useRef, useEffect } from "react";
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
 import { createClient } from "@supabase/supabase-js";
+import { useSession, useSupabaseClient } from "@supabase/auth-helpers-react";
 
-/* ─── Supabase ──────────────────────────────────────────────────────────────── */
+/* ─── Supabase Setup ─────────────────────────────────────────────────────────── */
 const supabaseUrl = "https://yabbhnnhnrainsakhuio.supabase.co";
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "REPLACE_ME";
 const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
-/* ─── Komponentas ──────────────────────────────────────────────────────────── */
+/* ─── InvoiceGenerator Component ────────────────────────────────────────────── */
 export default function InvoiceGenerator() {
+  const supabaseClient = useSupabaseClient();
+  const session = useSession();
+
   /* --------- Invoice number (localStorage) --------- */
   const [invoiceNumber, setInvoiceNumber] = useState<number>(1000);
   useEffect(() => {
@@ -68,8 +72,13 @@ export default function InvoiceGenerator() {
 
       /* PDF to Blob */
       const blob = pdf.output("blob");
-      console.log("Blob type:", blob.type, "Is Blob?", blob instanceof Blob);
 
+      /* Get current user ID */
+      const userId = session?.user.id;
+      if (!userId) {
+        alert("Prisijunkite, kad galėtumėte įkelti sąskaitą.");
+        return;
+      }
 
       /* Extract year and month for folder */
       const invoiceDate = new Date(data);
@@ -78,7 +87,7 @@ export default function InvoiceGenerator() {
         .padStart(2, "0")}`;
 
       /* Create unique filename */
-      const fileName = `${formatInvoiceNumber(invoiceNumber)}_${formattedDate.replace(/\./g, "-")}.pdf`;
+      const fileName = `${userId}_${formatInvoiceNumber(invoiceNumber)}_${formattedDate.replace(/\./g, "-")}.pdf`;
 
       /* Upload path with folder */
       const filePath = `${folder}/${fileName}`;
@@ -97,8 +106,6 @@ export default function InvoiceGenerator() {
         alert("Nepavyko įkelti sąskaitos į serverį: " + error.message);
         return;
       }
-
-      console.log("Upload success:", uploadData);
 
       /* Local download */
       pdf.save(fileName);
