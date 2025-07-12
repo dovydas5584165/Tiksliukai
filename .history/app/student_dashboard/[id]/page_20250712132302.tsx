@@ -115,7 +115,6 @@ export default function StudentDashboard() {
         tension: 0.3,
         pointRadius: 5,
         pointHoverRadius: 7,
-        clip: false
       },
     ],
   };
@@ -130,6 +129,7 @@ export default function StudentDashboard() {
       y: {
         min: 0,
         max: 10,
+        grace: 0,
         ticks: { stepSize: 1 },
         title: { display: true, text: "Pažymys" },
       },

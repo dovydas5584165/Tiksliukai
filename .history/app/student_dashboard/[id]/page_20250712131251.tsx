@@ -61,6 +61,9 @@ export default function StudentDashboard() {
   const [months, setMonths] = useState<number[]>([]);
   const [grades, setGrades] = useState<number[]>([]);
 
+  /* ------------------------------------------------------------------
+     FETCH GRADES ONCE ON MOUNT
+  ------------------------------------------------------------------ */
   useEffect(() => {
     (async () => {
       const {
@@ -87,14 +90,14 @@ export default function StudentDashboard() {
 
       (data as { grade: number; created_at: string }[]).forEach(
         ({ grade, created_at }) => {
-          m.push(new Date(created_at).getMonth() + 1); // 1–12
+          m.push(new Date(created_at).getMonth() + 1); // 1‑12
           g.push(grade);
         }
       );
 
-      /* Ensure a line if only one data point */
+      /* ensure a line if only one data point */
       if (m.length === 1) {
-        m.push(m[0] + 0.2); // slight x-offset
+        m.push(m[0] + 0.2); // slight x‑offset
         g.push(g[0]);
       }
 
@@ -103,6 +106,9 @@ export default function StudentDashboard() {
     })();
   }, []);
 
+  /* ------------------------------------------------------------------
+     CHART CONFIG
+  ------------------------------------------------------------------ */
   const chartData: ChartData<"line", number[], number> = {
     labels: months,
     datasets: [
@@ -115,7 +121,6 @@ export default function StudentDashboard() {
         tension: 0.3,
         pointRadius: 5,
         pointHoverRadius: 7,
-        clip: false
       },
     ],
   };
@@ -136,18 +141,19 @@ export default function StudentDashboard() {
       x: {
         title: { display: true, text: "Mėnuo" },
         ticks: {
-          callback(value) {
-            // @ts-ignore
-            const raw = this.getLabelForValue(value);
-            const monthNum = Math.round(Number(raw));
-            if (monthNum < 1 || monthNum > 12) return "";
-            return LT_MONTHS[monthNum];
+          callback: (value) => {
+            /* value can be 1‑12 or 7.2 etc.; round → index */
+            const idx = Math.round(Number(value));
+            return LT_MONTHS[idx] ?? "";
           },
         },
       },
     },
   };
 
+  /* ------------------------------------------------------------------
+     STATIC EXAMPLE LESSONS / ASSIGNMENTS
+  ------------------------------------------------------------------ */
   const upcomingLessons: Lesson[] = [
     { id: 1, title: "Įvadas į R ir RStudio", date: "2025-07-01" },
     { id: 2, title: "Statistikos pagrindai", date: "2025-07-05" },
@@ -158,6 +164,9 @@ export default function StudentDashboard() {
     { id: 2, title: "Matlab užduočių rinkinys", dueDate: "2025-07-07" },
   ];
 
+  /* ------------------------------------------------------------------
+     LOGOUT HANDLER
+  ------------------------------------------------------------------ */
   const handleLogout = async () => {
     const { error } = await supabase.auth.signOut();
     if (error) {
@@ -167,8 +176,12 @@ export default function StudentDashboard() {
     router.push("/auth/log-in");
   };
 
+  /* ------------------------------------------------------------------
+     RENDER
+  ------------------------------------------------------------------ */
   return (
     <div className="min-h-screen bg-gray-50 text-gray-900 font-sans flex flex-col">
+      {/* Header */}
       <header className="bg-white shadow-sm border-b border-gray-200 px-6 py-4 flex justify-between items-center">
         <h1 className="text-2xl font-bold">Sveikas, mokini!</h1>
         <nav className="space-x-4 text-sm sm:text-base">
@@ -190,7 +203,9 @@ export default function StudentDashboard() {
         </nav>
       </header>
 
+      {/* Main */}
       <main className="flex-grow container mx-auto px-4 sm:px-8 py-8 grid grid-cols-1 md:grid-cols-3 gap-8">
+        {/* Lessons & Assignments */}
         <section className="bg-white rounded shadow p-6">
           <h2 className="text-xl font-semibold mb-4">Artimiausios pamokos</h2>
           <ul className="space-y-3 text-gray-700">
@@ -215,11 +230,13 @@ export default function StudentDashboard() {
           </ul>
         </section>
 
+        {/* Grades Chart */}
         <section className="bg-white rounded shadow p-6 md:col-span-2">
           <Line data={chartData} options={chartOptions} />
         </section>
       </main>
 
+      {/* Footer */}
       <footer className="bg-white border-t border-gray-200 text-center py-4 text-sm text-gray-500">
         © 2025 Tiksliukai.lt
       </footer>

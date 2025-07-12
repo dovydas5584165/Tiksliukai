@@ -62,9 +62,6 @@ export default function TutorDashboard() {
   const goToAddLesson = () => {
     if (id) router.push(`/tutor_dashboard/${id}/add_lesson`);
   };
-  const goToAddGrade = () => {
-    if (id) router.push(`/tutor_dashboard/${id}/grades`);
-  };
   const goToResources = () => {
     if (id) router.push(`/tutor_dashboard/${id}/resources`);
   };
@@ -87,12 +84,6 @@ export default function TutorDashboard() {
             className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition"
           >
             Pridėti pamoką
-          </button>
-          <button
-            onClick={goToAddGrade}
-            className="px-4 py-2 bg-yellow-600 text-white rounded hover:bg-yellow-700 transition"
-          >
-            Pridėti pažymį
           </button>
           <button
             onClick={goToResources}

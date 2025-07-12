@@ -115,7 +115,6 @@ export default function StudentDashboard() {
         tension: 0.3,
         pointRadius: 5,
         pointHoverRadius: 7,
-        clip: false
       },
     ],
   };

@@ -63,7 +63,7 @@ export default function TutorDashboard() {
     if (id) router.push(`/tutor_dashboard/${id}/add_lesson`);
   };
   const goToAddGrade = () => {
-    if (id) router.push(`/tutor_dashboard/${id}/grades`);
+    if (id) router.push(`/tutor_dashboard/${id}/add_grade`);
   };
   const goToResources = () => {
     if (id) router.push(`/tutor_dashboard/${id}/resources`);
