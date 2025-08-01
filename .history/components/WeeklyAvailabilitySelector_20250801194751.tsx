@@ -10,15 +10,13 @@ import {
   setMinutes,
   startOfToday,
   formatISO,
-  addMinutes,
 } from "date-fns";
-import { supabase } from "@/lib/supabaseClient";
 
-const HOURS = Array.from({ length: 12 }, (_, i) => i + 8); // 08 to 19
+const HOURS = Array.from({ length: 12 }, (_, i) => i + 8); // 8 to 19
 const MINUTES = [0, 45];
 
 type Slot = {
-  date: Date;
+  date: Date; // date only (e.g. 2025-08-03)
   hour: number;
   minute: number;
 };
@@ -27,11 +25,9 @@ function slotKey({ date, hour, minute }: Slot) {
   return `${date.toDateString()}-${hour}-${minute}`;
 }
 
-export default function TwoWeekAvailabilityCalendar({ userId }: { userId: string }) {
+export default function TwoWeekAvailabilityCalendar() {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>();
   const [selectedSlots, setSelectedSlots] = useState<Set<string>>(new Set());
-  const [showConfirm, setShowConfirm] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
 
   const today = startOfToday();
   const twoWeeksLater = addDays(today, 13);
@@ -45,35 +41,24 @@ export default function TwoWeekAvailabilityCalendar({ userId }: { userId: string
     });
   };
 
-  const handleSubmit = async () => {
-    setSubmitting(true);
-    const rows = Array.from(selectedSlots).map((key) => {
+  const handleSubmit = () => {
+    const all: string[] = [];
+
+    selectedSlots.forEach((key) => {
       const [dateStr, hourStr, minStr] = key.split("-");
       const date = new Date(dateStr);
       const hour = parseInt(hourStr);
       const minute = parseInt(minStr);
-      const start = setMinutes(setHours(date, hour), minute);
-      const end = addMinutes(start, 45);
-
-      return {
-        user_id: userId,
-        start_time: formatISO(start),
-        end_time: formatISO(end),
-      };
+      const fullDate = setMinutes(setHours(date, hour), minute);
+      all.push(formatISO(fullDate)); // ISO UTC string
     });
 
-    const { error } = await supabase.from("availability").insert(rows);
-    if (error) alert("Nepavyko išsaugoti: " + error.message);
-    else {
-      alert("Laikai išsaugoti!");
-      setSelectedSlots(new Set());
-    }
-    setSubmitting(false);
-    setShowConfirm(false);
+    console.log("Selected slots (ISO):", all);
+    // await supabase.from("availability").insert(all.map(t => ({ start_time: t })));
   };
 
   return (
-    <div className="p-6 bg-white rounded-xl shadow-lg max-w-4xl mx-auto relative">
+    <div className="p-6 bg-white rounded-xl shadow-lg max-w-4xl mx-auto">
       <h2 className="text-xl font-semibold mb-4">Pasirinkite datas ir laikus</h2>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -84,6 +69,7 @@ export default function TwoWeekAvailabilityCalendar({ userId }: { userId: string
           fromDate={today}
           toDate={twoWeeksLater}
           weekStartsOn={1}
+          locale={undefined} // use "lt" if you add locale support
         />
 
         <div>
@@ -102,13 +88,13 @@ export default function TwoWeekAvailabilityCalendar({ userId }: { userId: string
                   MINUTES.map((minute) => {
                     const key = slotKey({ date: selectedDate, hour, minute });
                     const selected = selectedSlots.has(key);
-                    const label = `${String(hour).padStart(2, "0")}:${String(
-                      minute
-                    ).padStart(2, "0")}`;
+                    const label = `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
                     return (
                       <button
                         key={key}
-                        onClick={() => toggleSlot({ date: selectedDate, hour, minute })}
+                        onClick={() =>
+                          toggleSlot({ date: selectedDate, hour, minute })
+                        }
                         className={`px-3 py-2 rounded text-sm font-medium transition ${
                           selected
                             ? "bg-blue-500 text-white"
@@ -130,41 +116,12 @@ export default function TwoWeekAvailabilityCalendar({ userId }: { userId: string
 
       <div className="mt-6">
         <button
-          onClick={() => setShowConfirm(true)}
-          disabled={selectedSlots.size === 0}
-          className="px-6 py-3 bg-green-600 text-white rounded-md hover:bg-green-700 transition disabled:bg-gray-400"
+          onClick={handleSubmit}
+          className="px-6 py-3 bg-green-600 text-white rounded-md hover:bg-green-700 transition"
         >
           Išsaugoti pasirinkimus
         </button>
       </div>
-
-      {showConfirm && (
-        <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
-          <div className="bg-white p-6 rounded-lg max-w-md shadow-xl">
-            <h3 className="text-lg font-semibold mb-3">
-              Ar tikrai norite pasirinkti visus šiuos laikus?
-            </h3>
-            <p className="text-sm text-gray-600 mb-4">
-              Pažymėtus laikus atsiradus užsakymui turėsite pamoką pravesti.
-            </p>
-            <div className="flex justify-end gap-3">
-              <button
-                onClick={() => setShowConfirm(false)}
-                className="px-4 py-2 rounded bg-gray-200 hover:bg-gray-300"
-              >
-                Atšaukti
-              </button>
-              <button
-                onClick={handleSubmit}
-                disabled={submitting}
-                className="px-4 py-2 rounded bg-green-600 text-white hover:bg-green-700"
-              >
-                {submitting ? "Išsaugoma..." : "Patvirtinti"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

@@ -24,11 +24,6 @@ type Teacher = {
   hourly_wage: number;
 };
 
-type TutorLesson = {
-  user_id: string;
-  lesson_slug: string;
-};
-
 export default function ScheduleLanding() {
   const router = useRouter();
 
@@ -44,52 +39,38 @@ export default function ScheduleLanding() {
   const params = useParams();
   const slug = decodeURIComponent(params.slug as string);
 
-  // Fetch tutors with role = "tutor"
+  // Fetch tutors filtered by lesson slug
   useEffect(() => {
-    const fetchTeachersAndFilter = async () => {
+    const fetchTeachers = async () => {
       setLoading(true);
 
-      // Fetch all tutors
-      const { data: tutorsData, error: tutorsError } = await supabase
+      const { data, error } = await supabase
         .from("users")
-        .select("id, vardas, pavarde, hourly_wage")
+        .select(`
+          id, vardas, pavarde, hourly_wage,
+          tutor_lessons (
+            lesson:lessons (
+              slug
+            )
+          )
+        `)
         .eq("role", "tutor");
 
-      if (tutorsError) {
-        console.error("Klaida gaunant mokytojus:", tutorsError.message);
+      if (error) {
+        console.error("Klaida gaunant mokytojus:", error.message);
         setTeachers([]);
-        setLoading(false);
-        return;
+      } else {
+        const filteredTutors = (data || []).filter((tutor: any) =>
+          tutor.tutor_lessons.some(
+            (tl: any) => tl.lesson?.slug === slug
+          )
+        );
+
+        setTeachers(filteredTutors);
       }
-
-      // Fetch tutor lessons (assuming you have table tutor_lessons with user_id and lesson_slug)
-      const { data: tutorLessonsData, error: lessonsError } = await supabase
-        .from("tutor_lessons")
-        .select("user_id, lesson_slug");
-
-      if (lessonsError) {
-        console.error("Klaida gaunant tutor_lessons:", lessonsError.message);
-        setTeachers([]);
-        setLoading(false);
-        return;
-      }
-
-      // Filter tutors by lesson slug
-      const tutorIdsForLesson = new Set(
-        (tutorLessonsData || [])
-          .filter((tl) => tl.lesson_slug === slug)
-          .map((tl) => tl.user_id)
-      );
-
-      const filteredTutors = (tutorsData || []).filter((tutor) =>
-        tutorIdsForLesson.has(tutor.id)
-      );
-
-      setTeachers(filteredTutors);
       setLoading(false);
     };
-
-    fetchTeachersAndFilter();
+    fetchTeachers();
   }, [slug]);
 
   // Fetch availability slots
@@ -124,6 +105,7 @@ export default function ScheduleLanding() {
     }
   };
 
+  // Calculate total price based on hourly wages of selected tutors
   const totalPrice = selectedSlots.reduce((total, slot) => {
     const teacher = teachers.find((t) => t.id === slot.user_id);
     if (!teacher) return total;
@@ -175,6 +157,7 @@ export default function ScheduleLanding() {
     }
   };
 
+  // Filter slots by selected date and selected teacher
   const filteredSlots = slots.filter((slot) => {
     const dateMatch = selectedDate
       ? isSameDay(parseISO(slot.start_time), selectedDate)

@@ -24,11 +24,6 @@ type Teacher = {
   hourly_wage: number;
 };
 
-type TutorLesson = {
-  user_id: string;
-  lesson_slug: string;
-};
-
 export default function ScheduleLanding() {
   const router = useRouter();
 
@@ -39,60 +34,30 @@ export default function ScheduleLanding() {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   const [selectedSlots, setSelectedSlots] = useState<Availability[]>([]);
   const [bookingLoading, setBookingLoading] = useState(false);
-  const [topic, setTopic] = useState<string>("");
+  const [topic, setTopic] = useState<string>(""); // new topic input
 
   const params = useParams();
   const slug = decodeURIComponent(params.slug as string);
 
-  // Fetch tutors with role = "tutor"
   useEffect(() => {
-    const fetchTeachersAndFilter = async () => {
+    const fetchTeachers = async () => {
       setLoading(true);
-
-      // Fetch all tutors
-      const { data: tutorsData, error: tutorsError } = await supabase
+      const { data, error } = await supabase
         .from("users")
         .select("id, vardas, pavarde, hourly_wage")
         .eq("role", "tutor");
 
-      if (tutorsError) {
-        console.error("Klaida gaunant mokytojus:", tutorsError.message);
+      if (error) {
+        console.error("Klaida gaunant mokytojus:", error.message);
         setTeachers([]);
-        setLoading(false);
-        return;
+      } else {
+        setTeachers(data || []);
       }
-
-      // Fetch tutor lessons (assuming you have table tutor_lessons with user_id and lesson_slug)
-      const { data: tutorLessonsData, error: lessonsError } = await supabase
-        .from("tutor_lessons")
-        .select("user_id, lesson_slug");
-
-      if (lessonsError) {
-        console.error("Klaida gaunant tutor_lessons:", lessonsError.message);
-        setTeachers([]);
-        setLoading(false);
-        return;
-      }
-
-      // Filter tutors by lesson slug
-      const tutorIdsForLesson = new Set(
-        (tutorLessonsData || [])
-          .filter((tl) => tl.lesson_slug === slug)
-          .map((tl) => tl.user_id)
-      );
-
-      const filteredTutors = (tutorsData || []).filter((tutor) =>
-        tutorIdsForLesson.has(tutor.id)
-      );
-
-      setTeachers(filteredTutors);
       setLoading(false);
     };
-
-    fetchTeachersAndFilter();
+    fetchTeachers();
   }, [slug]);
 
-  // Fetch availability slots
   useEffect(() => {
     const fetchAvailability = async () => {
       setLoading(true);
@@ -124,6 +89,7 @@ export default function ScheduleLanding() {
     }
   };
 
+  // total price = sum of full hourly wages for all selected slots
   const totalPrice = selectedSlots.reduce((total, slot) => {
     const teacher = teachers.find((t) => t.id === slot.user_id);
     if (!teacher) return total;
@@ -146,6 +112,7 @@ export default function ScheduleLanding() {
 
         if (updateError) throw updateError;
 
+        // Send notification with optional topic message
         const notificationMessage = `Ar sutinki vesti ${slug} pamoką ${format(
           parseISO(slot.start_time),
           "yyyy-MM-dd HH:mm"
@@ -161,6 +128,7 @@ export default function ScheduleLanding() {
       alert("Pamokos sėkmingai užsakytos!");
       setSlots((prev) => prev.filter((s) => !selectedSlots.some(sel => sel.id === s.id)));
 
+      // Pass selected slots info to payment page using sessionStorage
       sessionStorage.setItem("selectedLessons", JSON.stringify(selectedSlots));
       sessionStorage.setItem("totalPrice", totalPrice.toFixed(2));
 

@@ -24,11 +24,6 @@ type Teacher = {
   hourly_wage: number;
 };
 
-type TutorLesson = {
-  user_id: string;
-  lesson_slug: string;
-};
-
 export default function ScheduleLanding() {
   const router = useRouter();
 
@@ -39,60 +34,29 @@ export default function ScheduleLanding() {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   const [selectedSlots, setSelectedSlots] = useState<Availability[]>([]);
   const [bookingLoading, setBookingLoading] = useState(false);
-  const [topic, setTopic] = useState<string>("");
 
   const params = useParams();
   const slug = decodeURIComponent(params.slug as string);
 
-  // Fetch tutors with role = "tutor"
   useEffect(() => {
-    const fetchTeachersAndFilter = async () => {
+    const fetchTeachers = async () => {
       setLoading(true);
-
-      // Fetch all tutors
-      const { data: tutorsData, error: tutorsError } = await supabase
+      const { data, error } = await supabase
         .from("users")
         .select("id, vardas, pavarde, hourly_wage")
         .eq("role", "tutor");
 
-      if (tutorsError) {
-        console.error("Klaida gaunant mokytojus:", tutorsError.message);
+      if (error) {
+        console.error("Klaida gaunant mokytojus:", error.message);
         setTeachers([]);
-        setLoading(false);
-        return;
+      } else {
+        setTeachers(data || []);
       }
-
-      // Fetch tutor lessons (assuming you have table tutor_lessons with user_id and lesson_slug)
-      const { data: tutorLessonsData, error: lessonsError } = await supabase
-        .from("tutor_lessons")
-        .select("user_id, lesson_slug");
-
-      if (lessonsError) {
-        console.error("Klaida gaunant tutor_lessons:", lessonsError.message);
-        setTeachers([]);
-        setLoading(false);
-        return;
-      }
-
-      // Filter tutors by lesson slug
-      const tutorIdsForLesson = new Set(
-        (tutorLessonsData || [])
-          .filter((tl) => tl.lesson_slug === slug)
-          .map((tl) => tl.user_id)
-      );
-
-      const filteredTutors = (tutorsData || []).filter((tutor) =>
-        tutorIdsForLesson.has(tutor.id)
-      );
-
-      setTeachers(filteredTutors);
       setLoading(false);
     };
-
-    fetchTeachersAndFilter();
+    fetchTeachers();
   }, [slug]);
 
-  // Fetch availability slots
   useEffect(() => {
     const fetchAvailability = async () => {
       setLoading(true);
@@ -124,6 +88,7 @@ export default function ScheduleLanding() {
     }
   };
 
+  // total price = sum of full hourly wages for all selected slots
   const totalPrice = selectedSlots.reduce((total, slot) => {
     const teacher = teachers.find((t) => t.id === slot.user_id);
     if (!teacher) return total;
@@ -146,14 +111,12 @@ export default function ScheduleLanding() {
 
         if (updateError) throw updateError;
 
-        const notificationMessage = `Ar sutinki vesti ${slug} pamoką ${format(
-          parseISO(slot.start_time),
-          "yyyy-MM-dd HH:mm"
-        )}?${topic ? ` Tema: "${topic}"` : ""}`;
-
         await supabase.from("notifications").insert({
           user_id: slot.user_id,
-          message: notificationMessage,
+          message: `Ar sutinki vesti ${slug} pamoką ${format(
+            parseISO(slot.start_time),
+            "yyyy-MM-dd HH:mm"
+          )}?`,
           is_read: false,
         });
       }
@@ -161,11 +124,12 @@ export default function ScheduleLanding() {
       alert("Pamokos sėkmingai užsakytos!");
       setSlots((prev) => prev.filter((s) => !selectedSlots.some(sel => sel.id === s.id)));
 
+      // Pass selected slots info to payment page using sessionStorage (or use context/global state)
       sessionStorage.setItem("selectedLessons", JSON.stringify(selectedSlots));
       sessionStorage.setItem("totalPrice", totalPrice.toFixed(2));
 
       setSelectedSlots([]);
-      setTopic("");
+
       router.push("/payment");
     } catch (err) {
       alert("Klaida užsakant pamokas. Bandykite dar kartą.");
@@ -190,6 +154,7 @@ export default function ScheduleLanding() {
       <header className="mb-8">
         <h1 className="text-3xl font-bold mb-4 capitalize">Pamokos: {slug}</h1>
 
+        {/* Modern teacher select */}
         {teachers.length > 0 && (
           <div className="mb-8 max-w-md relative">
             <label
@@ -289,28 +254,13 @@ export default function ScheduleLanding() {
         )}
       </div>
 
-      <div className="mt-12 border-t pt-6 max-w-md">
-        <label
-          htmlFor="topic"
-          className="block mb-2 text-gray-700 font-semibold"
-        >
-          Kokia tema norėtumėte mokytis? <span className="text-gray-400">(neprivaloma)</span>
-        </label>
-        <input
-          id="topic"
-          type="text"
-          className="w-full border border-gray-300 rounded-md p-2 mb-6 focus:outline-none focus:ring-2 focus:ring-blue-500"
-          placeholder="Įrašykite temą..."
-          value={topic}
-          onChange={(e) => setTopic(e.target.value)}
-        />
-
+      <div className="mt-12 border-t pt-6">
         <h2 className="text-2xl font-semibold mb-4">Jūsų pasirinktos pamokos</h2>
         {selectedSlots.length === 0 ? (
           <p>Jūs dar nepasirinkote pamokų.</p>
         ) : (
           <>
-            <ul className="mb-4 space-y-2">
+            <ul className="mb-4 space-y-2 max-w-md">
               {selectedSlots.map((slot) => {
                 const teacher = teachers.find((t) => t.id === slot.user_id);
                 return (
