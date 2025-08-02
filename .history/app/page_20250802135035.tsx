@@ -1,8 +1,8 @@
 "use client";
 
-import { useRef, useEffect, useState } from "react";
+import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { motion, animate } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 
 const lessons = [
   { name: "IT", slug: "it" },
@@ -13,24 +13,6 @@ const lessons = [
   { name: "Anglų k.", slug: "anglu-k" },
 ];
 
-function AnimatedNumber({ value }: { value: number }) {
-  const [count, setCount] = useState(0);
-
-  useEffect(() => {
-    const controls = animate(0, value, {
-      duration: 1.5,
-      onUpdate(latest) {
-        setCount(Math.floor(latest));
-      },
-    });
-    return () => controls.stop();
-  }, [value]);
-
-  return (
-    <div className="text-5xl font-extrabold text-blue-600 select-none">{count}+</div>
-  );
-}
-
 export default function Home() {
   const router = useRouter();
   const teacherRef = useRef<HTMLDivElement>(null);
@@ -39,11 +21,16 @@ export default function Home() {
     teacherRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
-  const stats = [
-    { icon: "📚", number: 1000, label: "pravestų pamokų" },
-    { icon: "😊", number: 100, label: "laimingų klientų" },
-    { icon: "🔟", number: 10, label: "gerų pažymių lietus" },
-  ];
+  // Video state to toggle between first and second video
+  const [showFirstVideo, setShowFirstVideo] = useState(true);
+  const firstVideoRef = useRef<HTMLVideoElement>(null);
+  const secondVideoRef = useRef<HTMLVideoElement>(null);
+
+  const onFirstVideoEnded = () => {
+    setShowFirstVideo(false);
+    // Play second video manually (some browsers require user interaction or explicit play)
+    secondVideoRef.current?.play();
+  };
 
   return (
     <div className="flex flex-col min-h-screen bg-white text-gray-900 font-sans">
@@ -89,48 +76,58 @@ export default function Home() {
           </div>
         </motion.section>
 
+        {/* Section 2: Video seamless autoplay */}
         <motion.section
-  initial={{ opacity: 0, y: 60 }}
-  whileInView={{ opacity: 1, y: 0 }}
-  viewport={{ once: true }}
-  transition={{ duration: 0.8 }}
-  className="w-full min-h-screen flex flex-col justify-center items-center bg-gradient-to-br from-blue-100 to-white snap-start px-6 py-20"
->
+          className="w-full min-h-screen flex flex-col justify-center items-center bg-gradient-to-br from-blue-100 to-white px-6 py-20 snap-start"
+          initial={{ opacity: 0, y: 60 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.8 }}
+        >
+          <AnimatePresence mode="wait">
+            {showFirstVideo ? (
+              <motion.video
+                key="first-video"
+                ref={firstVideoRef}
+                className="w-full max-w-6xl rounded-none"
+                src="https://yabbhnnhnrainsakhuio.supabase.co/storage/v1/object/public/videos/60d7accd-ab26-4a57-b66a-462e1f6d0e0b.mov"
+                autoPlay
+                muted
+                playsInline
+                onEnded={onFirstVideoEnded}
+                initial={{ opacity: 0, x: 50 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -50 }}
+                transition={{ duration: 0.8 }}
+                controls={false}
+              />
+            ) : (
+              <motion.video
+                key="second-video"
+                ref={secondVideoRef}
+                className="w-full max-w-6xl rounded-none"
+                src="https://yabbhnnhnrainsakhuio.supabase.co/storage/v1/object/public/videos/fe4fa1d0-a4a6-464c-a058-af48d73ffd71.mp4"
+                autoPlay
+                muted
+                playsInline
+                initial={{ opacity: 0, x: 50 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -50 }}
+                transition={{ duration: 0.8 }}
+                controls={false}
+              />
+            )}
+          </AnimatePresence>
 
+          <button
+            onClick={scrollToTeachers}
+            className="mt-10 px-6 py-3 bg-blue-600 text-white rounded-xl text-lg font-semibold hover:bg-blue-700 transition"
+          >
+            Mūsų mokytojai
+          </button>
+        </motion.section>
 
-  <video
-    className="w-full max-w-6xl rounded-none"
-    autoPlay
-    muted
-    playsInline
-    src="https://yabbhnnhnrainsakhuio.supabase.co/storage/v1/object/public/videos/60d7accd-ab26-4a57-b66a-462e1f6d0e0b.mov"
-  />
-
-  <button
-    onClick={scrollToTeachers}
-    className="mt-10 px-6 py-3 bg-blue-600 text-white rounded-xl text-lg font-semibold hover:bg-blue-700 transition"
-  >
-    Mūsų mokytojai
-  </button>
-</motion.section>
-<motion.section
-  initial={{ opacity: 0, y: 60 }}
-  whileInView={{ opacity: 1, y: 0 }}
-  viewport={{ once: true }}
-  transition={{ duration: 0.8 }}
-  className="w-full min-h-screen flex flex-col justify-center items-center bg-gradient-to-br from-blue-100 to-white snap-start px-6 py-20"
->
-
-
-  <video
-    className="w-full max-w-6xl rounded-none"
-    autoPlay
-    muted
-    playsInline
-    src="https://yabbhnnhnrainsakhuio.supabase.co/storage/v1/object/public/videos//219d9634-6f80-49b9-a7df-702fff838d2e.mov"
-  />
-
-</motion.section>
+        {/* Section 3: Kam man registruotis? */}
         <motion.section
           initial={{ opacity: 0, y: 60 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -141,11 +138,10 @@ export default function Home() {
           <h2 className="text-5xl font-extrabold mb-8 text-center">Kam man registruotis?</h2>
           <p className="max-w-2xl text-xl text-gray-700 leading-relaxed text-center">
             Užsiregistravę galėsite stebėti vaiko progresą ir matyti, ką jis mokosi.
-          
           </p>
         </motion.section>
 
-        {/* Section 3: Apie mus */}
+        {/* Section 4: Apie mus */}
         <motion.section
           initial={{ opacity: 0, y: 60 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -160,7 +156,7 @@ export default function Home() {
           </p>
         </motion.section>
 
-        {/* Section 4: Mūsų misija ir vizija */}
+        {/* Section 5: Mūsų misija ir vizija */}
         <motion.section
           initial={{ opacity: 0, y: 60 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -176,7 +172,7 @@ export default function Home() {
           </p>
         </motion.section>
 
-        {/* Section 5: Statistika */}
+        {/* Section 6: Statistika */}
         <motion.section
           initial={{ opacity: 0, y: 60 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -186,17 +182,25 @@ export default function Home() {
         >
           <h2 className="text-4xl font-extrabold mb-12 text-center">Statistika</h2>
           <div className="flex flex-col md:flex-row gap-16 justify-center items-center max-w-5xl w-full">
-            {stats.map(({ icon, number, label }) => (
-              <div key={label} className="flex flex-col items-center">
-                <div className="text-7xl mb-4 select-none">{icon}</div>
-                <AnimatedNumber value={number} />
-                <div className="mt-2 text-xl text-gray-700 text-center">{label}</div>
-              </div>
-            ))}
+            <div className="flex flex-col items-center">
+              <div className="text-7xl mb-4 select-none">📚</div>
+              <div className="text-5xl font-extrabold text-blue-600 select-none">1000+</div>
+              <div className="mt-2 text-xl text-gray-700 text-center">pravestų pamokų</div>
+            </div>
+            <div className="flex flex-col items-center">
+              <div className="text-7xl mb-4 select-none">😊</div>
+              <div className="text-5xl font-extrabold text-blue-600 select-none">100+</div>
+              <div className="mt-2 text-xl text-gray-700 text-center">laimingų klientų</div>
+            </div>
+            <div className="flex flex-col items-center">
+              <div className="text-7xl mb-4 select-none">🔟</div>
+              <div className="text-5xl font-extrabold text-blue-600 select-none">10+</div>
+              <div className="mt-2 text-xl text-gray-700 text-center">gerų pažymių lietus</div>
+            </div>
           </div>
         </motion.section>
 
-        {/* Section 6: Mūsų Mokytojai */}
+        {/* Section 7: Mūsų Mokytojai */}
         <motion.section
           ref={teacherRef}
           initial={{ opacity: 0, y: 60 }}

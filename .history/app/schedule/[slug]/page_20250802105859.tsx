@@ -12,7 +12,7 @@ import "react-day-picker/dist/style.css";
 
 type Availability = {
   id: number;
-  user_id: string; // tutor id
+  user_id: string;
   start_time: string;
   is_booked: boolean;
 };
@@ -249,7 +249,7 @@ export default function ScheduleLanding() {
     }
   };
 
-  // Price calculation: 20 EUR per lesson
+  // Pakeičiau: kainą skaičiuoja pagal kiekvieną pamoką po 20 eurų
   const totalPrice = selectedSlots.length * 20;
 
   const handleBookingConfirmAll = () => {
@@ -266,27 +266,18 @@ export default function ScheduleLanding() {
     try {
       const slotIds = selectedSlots.map((slot) => slot.id);
 
-      // Extract tutor ID from first selected slot
-      const tutorId = selectedSlots.length > 0 ? selectedSlots[0].user_id : null;
+      const { error } = await supabase.from("bookings").insert({
+        student_name: info.name,
+        student_email: info.email,
+        student_phone: info.phone || null,
+        topic: info.topic || null,
+        slot_ids: slotIds,
+        total_price: totalPrice,
+        created_at: new Date().toISOString(),
+        lesson_slug: slug,
+      });
 
-      // Insert booking and get inserted booking id
-      const { data: bookingData, error } = await supabase
-        .from("bookings")
-        .insert({
-          student_name: info.name,
-          student_email: info.email,
-          student_phone: info.phone || null,
-          topic: info.topic || null,
-          slot_ids: slotIds,
-          total_price: totalPrice,
-          created_at: new Date().toISOString(),
-          lesson_slug: slug,
-          tutor_id: tutorId, // <-- added tutor id here
-        })
-        .select()
-        .single();
-
-      if (error || !bookingData) throw error || new Error("Nepavyko sukurti užsakymo");
+      if (error) throw error;
 
       for (const slot of selectedSlots) {
         const { error: updateError } = await supabase
@@ -301,12 +292,10 @@ export default function ScheduleLanding() {
           "yyyy-MM-dd HH:mm"
         )}?${info.topic ? ` Tema: "${info.topic}"` : ""}`;
 
-        // Insert notification with booking_id linked
         await supabase.from("notifications").insert({
           user_id: slot.user_id,
           message: notificationMessage,
           is_read: false,
-          booking_id: bookingData.id,
         });
       }
 
@@ -422,19 +411,21 @@ export default function ScheduleLanding() {
         ) : (
           <>
             <ul className="mb-4 space-y-2">
-              {selectedSlots.map((slot) => (
-                <li
-                  key={slot.id}
-                  className="flex justify-between border rounded p-3 shadow-sm"
-                >
-                  <div>
-                    <p className="font-medium">
-                      {format(parseISO(slot.start_time), "yyyy-MM-dd HH:mm")}
-                    </p>
-                  </div>
-                  <div className="font-semibold text-blue-700">€20.00</div>
-                </li>
-              ))}
+              {selectedSlots.map((slot) => {
+                return (
+                  <li
+                    key={slot.id}
+                    className="flex justify-between border rounded p-3 shadow-sm"
+                  >
+                    <div>
+                      <p className="font-medium">
+                        {format(parseISO(slot.start_time), "yyyy-MM-dd HH:mm")}
+                      </p>
+                    </div>
+                    <div className="font-semibold text-blue-700">€20.00</div>
+                  </li>
+                );
+              })}
             </ul>
             <div className="text-right font-bold text-lg mb-4">
               Iš viso: €{totalPrice.toFixed(2)}

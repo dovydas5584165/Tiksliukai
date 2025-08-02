@@ -96,15 +96,16 @@ export default function Home() {
   transition={{ duration: 0.8 }}
   className="w-full min-h-screen flex flex-col justify-center items-center bg-gradient-to-br from-blue-100 to-white snap-start px-6 py-20"
 >
-
+  <h2 className="text-5xl font-extrabold mb-8 text-center">Kaip tai veikia?</h2>
 
   <video
-    className="w-full max-w-6xl rounded-none"
-    autoPlay
-    muted
+    className="w-full max-w-3xl rounded-xl shadow-xl"
+    controls
     playsInline
     src="https://yabbhnnhnrainsakhuio.supabase.co/storage/v1/object/public/videos/60d7accd-ab26-4a57-b66a-462e1f6d0e0b.mov"
-  />
+  >
+    Jūsų naršyklė nepalaiko vaizdo įrašų.
+  </video>
 
   <button
     onClick={scrollToTeachers}
@@ -113,24 +114,7 @@ export default function Home() {
     Mūsų mokytojai
   </button>
 </motion.section>
-<motion.section
-  initial={{ opacity: 0, y: 60 }}
-  whileInView={{ opacity: 1, y: 0 }}
-  viewport={{ once: true }}
-  transition={{ duration: 0.8 }}
-  className="w-full min-h-screen flex flex-col justify-center items-center bg-gradient-to-br from-blue-100 to-white snap-start px-6 py-20"
->
 
-
-  <video
-    className="w-full max-w-6xl rounded-none"
-    autoPlay
-    muted
-    playsInline
-    src="https://yabbhnnhnrainsakhuio.supabase.co/storage/v1/object/public/videos//219d9634-6f80-49b9-a7df-702fff838d2e.mov"
-  />
-
-</motion.section>
         <motion.section
           initial={{ opacity: 0, y: 60 }}
           whileInView={{ opacity: 1, y: 0 }}

@@ -92,13 +92,13 @@ export default function RegistracijaPage() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-tr from-blue-50 via-blue-100 to-blue-200 p-6">
       <div className="w-full max-w-lg rounded-3xl bg-white p-10 shadow-xl border border-blue-300">
-        <h1 className="text-center text-4xl font-extrabold mb-8 text-black tracking-wide drop-shadow-sm">
+        <h1 className="text-center text-4xl font-extrabold mb-8 text-blue-800 tracking-wide drop-shadow-sm">
           REGISTRACIJA
         </h1>
 
-        <form onSubmit={handleSubmit} className="flex flex-col gap-5 text-black">
+        <form onSubmit={handleSubmit} className="flex flex-col gap-5">
           <select
-            className="border border-blue-300 rounded-lg px-4 py-3 text-lg placeholder-black focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
+            className="border border-blue-300 rounded-lg px-4 py-3 text-lg text-blue-900 placeholder-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
             value={role}
             onChange={(e) => setRole(e.target.value)}
             required
@@ -112,7 +112,7 @@ export default function RegistracijaPage() {
 
           {role === "client" && (
             <input
-              className="border border-blue-300 rounded-lg px-4 py-3 text-lg placeholder-black focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
+              className="border border-blue-300 rounded-lg px-4 py-3 text-lg placeholder-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
               type="text"
               placeholder="Vaiko vardas"
               value={vaikoVardas}
@@ -123,7 +123,7 @@ export default function RegistracijaPage() {
           )}
 
           <input
-            className="border border-blue-300 rounded-lg px-4 py-3 text-lg placeholder-black focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
+            className="border border-blue-300 rounded-lg px-4 py-3 text-lg placeholder-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
             type="text"
             placeholder="Vardas"
             value={vardas}
@@ -132,7 +132,7 @@ export default function RegistracijaPage() {
             autoComplete="given-name"
           />
           <input
-            className="border border-blue-300 rounded-lg px-4 py-3 text-lg placeholder-black focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
+            className="border border-blue-300 rounded-lg px-4 py-3 text-lg placeholder-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
             type="text"
             placeholder="Pavardė"
             value={pavarde}
@@ -141,8 +141,8 @@ export default function RegistracijaPage() {
             autoComplete="family-name"
           />
 
-          <fieldset className="border border-blue-300 rounded-lg p-4 text-black">
-            <legend className="font-semibold mb-3 select-none">
+          <fieldset className="border border-blue-300 rounded-lg p-4">
+            <legend className="font-semibold text-blue-800 mb-3 select-none">
               Pasirinkite pamokas:
             </legend>
             <div className="grid grid-cols-2 gap-3">
@@ -151,7 +151,7 @@ export default function RegistracijaPage() {
                 return (
                   <label
                     key={slug}
-                    className="flex items-center cursor-pointer space-x-3 hover:text-black transition"
+                    className="flex items-center cursor-pointer space-x-3 hover:text-blue-700 transition"
                   >
                     <input
                       type="checkbox"
@@ -168,7 +168,7 @@ export default function RegistracijaPage() {
           </fieldset>
 
           <input
-            className="border border-blue-300 rounded-lg px-4 py-3 text-lg placeholder-black focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
+            className="border border-blue-300 rounded-lg px-4 py-3 text-lg placeholder-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
             type="email"
             placeholder="El. paštas"
             value={email}
@@ -177,7 +177,7 @@ export default function RegistracijaPage() {
             autoComplete="email"
           />
           <input
-            className="border border-blue-300 rounded-lg px-4 py-3 text-lg placeholder-black focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
+            className="border border-blue-300 rounded-lg px-4 py-3 text-lg placeholder-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
             type="password"
             placeholder="Slaptažodis"
             value={slaptazodis}
@@ -186,7 +186,7 @@ export default function RegistracijaPage() {
             autoComplete="new-password"
           />
           <input
-            className="border border-blue-300 rounded-lg px-4 py-3 text-lg placeholder-black focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
+            className="border border-blue-300 rounded-lg px-4 py-3 text-lg placeholder-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
             type="password"
             placeholder="Pakartokite slaptažodį"
             value={repeatSlaptazodis}
@@ -204,21 +204,21 @@ export default function RegistracijaPage() {
         </form>
 
         {errorMsg && (
-          <p className="mt-6 text-center text-black font-semibold animate-fadeIn">
+          <p className="mt-6 text-center text-blue-600 font-semibold animate-fadeIn">
             {errorMsg}
           </p>
         )}
         {successMsg && (
-          <p className="mt-6 text-center text-black font-semibold animate-fadeIn">
+          <p className="mt-6 text-center text-blue-700 font-semibold animate-fadeIn">
             {successMsg}
           </p>
         )}
 
-        <p className="mt-8 text-center text-sm text-black">
+        <p className="mt-8 text-center text-sm text-blue-800">
           Jau turite paskyrą?{" "}
           <a
             href="/auth/log-in"
-            className="font-semibold underline hover:text-black transition"
+            className="font-semibold underline hover:text-blue-900 transition"
           >
             Prisijunkite
           </a>

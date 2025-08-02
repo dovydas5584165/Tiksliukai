@@ -12,7 +12,7 @@ import "react-day-picker/dist/style.css";
 
 type Availability = {
   id: number;
-  user_id: string; // tutor id
+  user_id: string;
   start_time: string;
   is_booked: boolean;
 };
@@ -58,7 +58,7 @@ function BookingInfoModal({
   };
 
   return (
-    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-6">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-6">
       <div className="bg-white rounded-lg shadow-lg max-w-md w-full p-6 space-y-4">
         <h2 className="text-xl font-bold">Įveskite savo kontaktinę informaciją</h2>
 
@@ -131,10 +131,13 @@ export default function ScheduleLanding() {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   const [selectedSlots, setSelectedSlots] = useState<Availability[]>([]);
   const [bookingLoading, setBookingLoading] = useState(false);
+  const [topic, setTopic] = useState<string>("");
 
+  // New modal states
   const [showBookingModal, setShowBookingModal] = useState(false);
   const [bookingSubmitting, setBookingSubmitting] = useState(false);
 
+  // Fetch teachers filtered by lesson slug via user_lessons join
   useEffect(() => {
     const fetchTeachersByLesson = async () => {
       setLoading(true);
@@ -199,6 +202,7 @@ export default function ScheduleLanding() {
     fetchTeachersByLesson();
   }, [slug]);
 
+  // Fetch availability slots filtered by selected teacher and date
   useEffect(() => {
     const fetchAvailability = async () => {
       setLoading(true);
@@ -232,14 +236,17 @@ export default function ScheduleLanding() {
     fetchAvailability();
   }, [selectedTeacher]);
 
+  // Extract unique available days (strings) and filter out invalid values
   const availableDays = Array.from(
     new Set(availabilities.map((a) => a.start_time.slice(0, 10)).filter(Boolean))
   ).map((day) => parseISO(day));
 
+  // Filter slots for the selected date
   const filteredSlots = availabilities.filter((slot) =>
     selectedDate ? isSameDay(parseISO(slot.start_time), selectedDate) : true
   );
 
+  // Toggle slot selection
   const toggleSlotSelection = (slot: Availability) => {
     const exists = selectedSlots.find((s) => s.id === slot.id);
     if (exists) {
@@ -249,9 +256,13 @@ export default function ScheduleLanding() {
     }
   };
 
-  // Price calculation: 20 EUR per lesson
-  const totalPrice = selectedSlots.length * 20;
+  const totalPrice = selectedSlots.reduce((total, slot) => {
+    const teacher = teachers.find((t) => t.id === slot.user_id);
+    if (!teacher) return total;
+    return total + teacher.hourly_wage;
+  }, 0);
 
+  // When "Užsakyti visas pamokas" clicked - open modal
   const handleBookingConfirmAll = () => {
     if (selectedSlots.length === 0) {
       alert("Pasirinkite bent vieną pamoką prieš užsakant.");
@@ -260,34 +271,28 @@ export default function ScheduleLanding() {
     setShowBookingModal(true);
   };
 
+  // Submit booking info form modal
   const handleBookingInfoSubmit = async (info: BookingInfo) => {
     setBookingSubmitting(true);
 
     try {
+      // Insert booking info + slot IDs into bookings table
       const slotIds = selectedSlots.map((slot) => slot.id);
 
-      // Extract tutor ID from first selected slot
-      const tutorId = selectedSlots.length > 0 ? selectedSlots[0].user_id : null;
+      const { error } = await supabase.from("bookings").insert({
+        student_name: info.name,
+        student_email: info.email,
+        student_phone: info.phone || null,
+        topic: info.topic || topic || null,
+        slot_ids: slotIds,
+        total_price: totalPrice,
+        created_at: new Date().toISOString(),
+        lesson_slug: slug,
+      });
 
-      // Insert booking and get inserted booking id
-      const { data: bookingData, error } = await supabase
-        .from("bookings")
-        .insert({
-          student_name: info.name,
-          student_email: info.email,
-          student_phone: info.phone || null,
-          topic: info.topic || null,
-          slot_ids: slotIds,
-          total_price: totalPrice,
-          created_at: new Date().toISOString(),
-          lesson_slug: slug,
-          tutor_id: tutorId, // <-- added tutor id here
-        })
-        .select()
-        .single();
+      if (error) throw error;
 
-      if (error || !bookingData) throw error || new Error("Nepavyko sukurti užsakymo");
-
+      // Mark slots as booked and send notifications
       for (const slot of selectedSlots) {
         const { error: updateError } = await supabase
           .from("availability")
@@ -301,12 +306,10 @@ export default function ScheduleLanding() {
           "yyyy-MM-dd HH:mm"
         )}?${info.topic ? ` Tema: "${info.topic}"` : ""}`;
 
-        // Insert notification with booking_id linked
         await supabase.from("notifications").insert({
           user_id: slot.user_id,
           message: notificationMessage,
           is_read: false,
-          booking_id: bookingData.id,
         });
       }
 
@@ -314,6 +317,7 @@ export default function ScheduleLanding() {
 
       setShowBookingModal(false);
       setSelectedSlots([]);
+      setTopic("");
       setAvailabilities((prev) => prev.filter((s) => !selectedSlots.some(sel => sel.id === s.id)));
 
       router.push("/payment");
@@ -351,7 +355,7 @@ export default function ScheduleLanding() {
               <option value="">-- Rodyti visus --</option>
               {teachers.map((t) => (
                 <option key={t.id} value={t.id}>
-                  {t.vardas} {t.pavarde} – €20/val.
+                  {t.vardas} {t.pavarde} – €{t.hourly_wage}/val.
                 </option>
               ))}
             </select>
@@ -369,9 +373,10 @@ export default function ScheduleLanding() {
           fromDate={new Date()}
           toDate={addDays(new Date(), 31)}
           locale={lt}
-          disabled={(day) =>
-            !availableDays.some((availableDay) => isSameDay(availableDay, day))
-          }
+          disabled={(day) => {
+            // disable days not in availableDays
+            return !availableDays.some((availableDay) => isSameDay(availableDay, day));
+          }}
           modifiersClassNames={{
             selected: "bg-blue-600 text-white rounded",
             today: "underline",
@@ -397,6 +402,7 @@ export default function ScheduleLanding() {
               const time = parseISO(slot.start_time);
               const formatted = format(time, "HH:mm");
               const isSelected = selectedSlots.some((s) => s.id === slot.id);
+              const teacher = teachers.find((t) => t.id === slot.user_id);
 
               return (
                 <div
@@ -407,7 +413,11 @@ export default function ScheduleLanding() {
                   onClick={() => toggleSlotSelection(slot)}
                 >
                   <p className="font-medium text-lg">{formatted}</p>
-                  <p className="text-xs mt-1 text-gray-600">€20/val.</p>
+                  {teacher && (
+                    <p className="text-xs mt-1 text-gray-600">
+                      {teacher.vardas} {teacher.pavarde} – €{teacher.hourly_wage}/val.
+                    </p>
+                  )}
                 </div>
               );
             })}
@@ -416,25 +426,48 @@ export default function ScheduleLanding() {
       </div>
 
       <div className="mt-12 border-t pt-6 max-w-md">
+        <label
+          htmlFor="topic"
+          className="block mb-2 text-gray-700 font-semibold"
+        >
+          Kokia tema norėtumėte mokytis? <span className="text-gray-400">(neprivaloma)</span>
+        </label>
+        <input
+          id="topic"
+          type="text"
+          className="w-full border border-gray-300 rounded-md p-2 mb-6 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          placeholder="Įrašykite temą..."
+          value={topic}
+          onChange={(e) => setTopic(e.target.value)}
+        />
+
         <h2 className="text-2xl font-semibold mb-4">Jūsų pasirinktos pamokos</h2>
         {selectedSlots.length === 0 ? (
           <p>Jūs dar nepasirinkote pamokų.</p>
         ) : (
           <>
             <ul className="mb-4 space-y-2">
-              {selectedSlots.map((slot) => (
-                <li
-                  key={slot.id}
-                  className="flex justify-between border rounded p-3 shadow-sm"
-                >
-                  <div>
-                    <p className="font-medium">
-                      {format(parseISO(slot.start_time), "yyyy-MM-dd HH:mm")}
-                    </p>
-                  </div>
-                  <div className="font-semibold text-blue-700">€20.00</div>
-                </li>
-              ))}
+              {selectedSlots.map((slot) => {
+                const teacher = teachers.find((t) => t.id === slot.user_id);
+                return (
+                  <li
+                    key={slot.id}
+                    className="flex justify-between border rounded p-3 shadow-sm"
+                  >
+                    <div>
+                      <p className="font-medium">
+                        {format(parseISO(slot.start_time), "yyyy-MM-dd HH:mm")}
+                      </p>
+                      <p className="text-sm text-gray-600">
+                        {teacher?.vardas} {teacher?.pavarde}
+                      </p>
+                    </div>
+                    <div className="font-semibold text-blue-700">
+                      €{teacher ? teacher.hourly_wage.toFixed(2) : "0.00"}
+                    </div>
+                  </li>
+                );
+              })}
             </ul>
             <div className="text-right font-bold text-lg mb-4">
               Iš viso: €{totalPrice.toFixed(2)}
@@ -450,6 +483,7 @@ export default function ScheduleLanding() {
         )}
       </div>
 
+      {/* Booking info modal */}
       {showBookingModal && (
         <BookingInfoModal
           slots={selectedSlots}

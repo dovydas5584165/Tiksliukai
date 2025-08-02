@@ -16,6 +16,7 @@ export default function RegistracijaPage() {
   const [successMsg, setSuccessMsg] = useState("");
   const router = useRouter();
 
+  // Helper to create slugs like "matematika" from "Matematika"
   const slugify = (text: string) =>
     text
       .toLowerCase()
@@ -23,14 +24,7 @@ export default function RegistracijaPage() {
       .normalize("NFD")
       .replace(/[\u0300-\u036f]/g, "");
 
-  const lessonsList = [
-    "Matematika",
-    "Anglų kalba",
-    "Programavimas",
-    "Fizika",
-    "Biologija",
-    "Chemija",
-  ];
+  const lessonsList = ["Matematika", "Anglų kalba", "Programavimas", "Fizika"];
 
   const handlePamokosChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { value, checked } = e.target;
@@ -55,7 +49,7 @@ export default function RegistracijaPage() {
     const body = JSON.stringify({
       vardas,
       pavarde,
-      pamokos,
+      pamokos, // This is array of slugs now!
       role,
       email,
       slaptazodis,
@@ -90,136 +84,112 @@ export default function RegistracijaPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-tr from-blue-50 via-blue-100 to-blue-200 p-6">
-      <div className="w-full max-w-lg rounded-3xl bg-white p-10 shadow-xl border border-blue-300">
-        <h1 className="text-center text-4xl font-extrabold mb-8 text-black tracking-wide drop-shadow-sm">
-          REGISTRACIJA
-        </h1>
+    <div className="min-h-screen flex items-center justify-center bg-gray-100 p-5">
+      <div className="w-full max-w-md rounded-xl bg-white p-8 shadow-lg text-black">
+        <h1 className="text-center font-bold mb-6 text-2xl">REGISTRACIJA:</h1>
 
-        <form onSubmit={handleSubmit} className="flex flex-col gap-5 text-black">
+        <form onSubmit={handleSubmit} className="flex flex-col gap-3">
           <select
-            className="border border-blue-300 rounded-lg px-4 py-3 text-lg placeholder-black focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
+            className="border rounded p-2"
             value={role}
             onChange={(e) => setRole(e.target.value)}
             required
           >
-            <option value="" disabled>
-              Pasirinkite rolę
-            </option>
+            <option value="">Pasirinkite rolę</option>
             <option value="tutor">Mokytojas</option>
             <option value="client">Klientas</option>
           </select>
 
           {role === "client" && (
             <input
-              className="border border-blue-300 rounded-lg px-4 py-3 text-lg placeholder-black focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
+              className="border rounded p-2"
               type="text"
               placeholder="Vaiko vardas"
               value={vaikoVardas}
               onChange={(e) => setVaikoVardas(e.target.value)}
               required
-              autoComplete="off"
             />
           )}
 
           <input
-            className="border border-blue-300 rounded-lg px-4 py-3 text-lg placeholder-black focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
+            className="border rounded p-2"
             type="text"
             placeholder="Vardas"
             value={vardas}
             onChange={(e) => setVardas(e.target.value)}
             required
-            autoComplete="given-name"
           />
           <input
-            className="border border-blue-300 rounded-lg px-4 py-3 text-lg placeholder-black focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
+            className="border rounded p-2"
             type="text"
             placeholder="Pavardė"
             value={pavarde}
             onChange={(e) => setPavarde(e.target.value)}
             required
-            autoComplete="family-name"
           />
 
-          <fieldset className="border border-blue-300 rounded-lg p-4 text-black">
-            <legend className="font-semibold mb-3 select-none">
-              Pasirinkite pamokas:
-            </legend>
-            <div className="grid grid-cols-2 gap-3">
-              {lessonsList.map((lesson) => {
-                const slug = slugify(lesson);
-                return (
-                  <label
-                    key={slug}
-                    className="flex items-center cursor-pointer space-x-3 hover:text-black transition"
-                  >
-                    <input
-                      type="checkbox"
-                      value={slug}
-                      checked={pamokos.includes(slug)}
-                      onChange={handlePamokosChange}
-                      className="h-5 w-5 rounded border-blue-400 text-blue-600 focus:ring-blue-500"
-                    />
-                    <span className="select-none">{lesson}</span>
-                  </label>
-                );
-              })}
-            </div>
+          <fieldset className="border rounded p-2 mb-1">
+            <legend className="font-bold">Pasirinkite pamokas:</legend>
+            {lessonsList.map((lesson) => {
+              const slug = slugify(lesson);
+              return (
+                <label key={slug} className="block cursor-pointer">
+                  <input
+                    type="checkbox"
+                    value={slug}
+                    checked={pamokos.includes(slug)}
+                    onChange={handlePamokosChange}
+                    className="mr-2"
+                  />
+                  {lesson}
+                </label>
+              );
+            })}
           </fieldset>
 
           <input
-            className="border border-blue-300 rounded-lg px-4 py-3 text-lg placeholder-black focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
+            className="border rounded p-2"
             type="email"
             placeholder="El. paštas"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
-            autoComplete="email"
           />
           <input
-            className="border border-blue-300 rounded-lg px-4 py-3 text-lg placeholder-black focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
+            className="border rounded p-2"
             type="password"
             placeholder="Slaptažodis"
             value={slaptazodis}
             onChange={(e) => setSlaptazodis(e.target.value)}
             required
-            autoComplete="new-password"
           />
           <input
-            className="border border-blue-300 rounded-lg px-4 py-3 text-lg placeholder-black focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
+            className="border rounded p-2"
             type="password"
             placeholder="Pakartokite slaptažodį"
             value={repeatSlaptazodis}
             onChange={(e) => setRepeatSlaptazodis(e.target.value)}
             required
-            autoComplete="new-password"
           />
 
           <button
             type="submit"
-            className="mt-4 py-3 rounded-lg bg-blue-700 text-white font-semibold text-lg shadow-md hover:bg-blue-800 focus:outline-none focus:ring-4 focus:ring-blue-400 transition"
+            className="mt-2 p-3 rounded-lg bg-blue-600 text-white font-bold hover:bg-blue-700"
           >
             Užsiregistruoti
           </button>
         </form>
 
         {errorMsg && (
-          <p className="mt-6 text-center text-black font-semibold animate-fadeIn">
-            {errorMsg}
-          </p>
+          <p className="text-center text-red-600 mt-3">{errorMsg}</p>
         )}
         {successMsg && (
-          <p className="mt-6 text-center text-black font-semibold animate-fadeIn">
-            {successMsg}
-          </p>
+          <p className="text-center text-green-600 mt-3">{successMsg}</p>
         )}
 
-        <p className="mt-8 text-center text-sm text-black">
+        <p className="text-center text-sm mt-5">
           Jau turite paskyrą?{" "}
-          <a
-            href="/auth/log-in"
-            className="font-semibold underline hover:text-black transition"
-          >
+          <a href="/auth/log-in" className="text-blue-600 underline">
             Prisijunkite
           </a>
         </p>

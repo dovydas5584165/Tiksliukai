@@ -261,18 +261,24 @@ export default function TutorDashboard() {
             onClick={() => goTo("sf_form")}
             className="px-5 py-2 bg-blue-600 text-white rounded-lg shadow hover:bg-blue-700 transition"
           >
-            Išrašyti sąskaitą
+            Įrašyti sąskaitą
+          </button>
+          <button
+            onClick={() => goTo("add_lesson")}
+            className="px-5 py-2 bg-green-600 text-white rounded-lg shadow hover:bg-green-700 transition"
+          >
+            Pridėti pamoką
           </button>
           <button
             onClick={() => goTo("grades")}
-            className="px-5 py-2 bg-blue-600 text-white rounded-lg shadow hover:bg-blue-700 transition"
+            className="px-5 py-2 bg-yellow-600 text-white rounded-lg shadow hover:bg-yellow-700 transition"
           >
             Pridėti pažymį
           </button>
           <button
-            onClick={() => window.open("https://drive.google.com/drive/u/1/folders/1uBSRCUxunwWaXNIIeAWP8keY1O5wlzm7", "_blank")}
-            className="px-5 py-2 bg-blue-600 text-white rounded-lg shadow hover:bg-blue-700 transition"
-            >
+            onClick={() => goTo("resources")}
+            className="px-5 py-2 bg-purple-600 text-white rounded-lg shadow hover:bg-purple-700 transition"
+          >
             Resursai
           </button>
           <button
@@ -350,8 +356,8 @@ export default function TutorDashboard() {
         <section className="bg-white rounded-xl shadow-lg p-8">
           <h2 className="text-2xl font-semibold mb-6 border-b pb-3">Prieinamumas</h2>
           <WeeklyAvailabilitySelector
-            //initialSlots={availabilitySlots}
-            //onSave={handleSave}
+            initialSlots={availabilitySlots}
+            onSave={handleSave}
             userId={id}
           />
         </section>

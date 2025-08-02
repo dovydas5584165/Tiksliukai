@@ -12,7 +12,7 @@ import "react-day-picker/dist/style.css";
 
 type Availability = {
   id: number;
-  user_id: string; // tutor id
+  user_id: string;
   start_time: string;
   is_booked: boolean;
 };
@@ -266,9 +266,6 @@ export default function ScheduleLanding() {
     try {
       const slotIds = selectedSlots.map((slot) => slot.id);
 
-      // Extract tutor ID from first selected slot
-      const tutorId = selectedSlots.length > 0 ? selectedSlots[0].user_id : null;
-
       // Insert booking and get inserted booking id
       const { data: bookingData, error } = await supabase
         .from("bookings")
@@ -281,7 +278,6 @@ export default function ScheduleLanding() {
           total_price: totalPrice,
           created_at: new Date().toISOString(),
           lesson_slug: slug,
-          tutor_id: tutorId, // <-- added tutor id here
         })
         .select()
         .single();
@@ -306,7 +302,7 @@ export default function ScheduleLanding() {
           user_id: slot.user_id,
           message: notificationMessage,
           is_read: false,
-          booking_id: bookingData.id,
+          booking_id: bookingData.id,  // Link booking here!
         });
       }
 

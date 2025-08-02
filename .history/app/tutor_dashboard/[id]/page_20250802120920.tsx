@@ -264,10 +264,10 @@ export default function TutorDashboard() {
             Išrašyti sąskaitą
           </button>
           <button
-            onClick={() => goTo("grades")}
+            onClick={() => goTo("add_lesson")}
             className="px-5 py-2 bg-blue-600 text-white rounded-lg shadow hover:bg-blue-700 transition"
           >
-            Pridėti pažymį
+            Pridėti pamoką
           </button>
           <button
             onClick={() => window.open("https://drive.google.com/drive/u/1/folders/1uBSRCUxunwWaXNIIeAWP8keY1O5wlzm7", "_blank")}

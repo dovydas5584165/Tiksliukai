@@ -13,12 +13,19 @@ type AvailabilitySlot = {
   status: number;
 };
 
+type Lesson = {
+  id: string;
+  name: string;
+  slug: string;
+};
+
 type Booking = {
   id: string;
   student_name: string;
   student_email: string;
-  student_phone?: string | null;
   topic?: string;
+  total_price: number;
+  lesson_slug: string;
   created_at: string;
 };
 
@@ -33,9 +40,62 @@ type Notification = {
   message: string;
   is_read: boolean | null;
   related_slot_id: string | null;
-  booking_id: string | null;
+  booking_id: string | null; // Added booking_id here
   created_at: string | null;
 };
+
+function TermsPopup({ onAccept }: { onAccept: () => void }) {
+  const [agreed, setAgreed] = useState(false);
+
+  const handleAgree = () => {
+    if (!agreed) {
+      alert("Prašome sutikti su paslaugų teikimo sutartimi.");
+      return;
+    }
+    onAccept();
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center p-6 z-50">
+      <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full p-8 max-h-[80vh] overflow-y-auto">
+        <h2 className="text-3xl font-extrabold mb-6 text-center">Paslaugų teikimo sutartis</h2>
+
+        <div className="text-md text-gray-700 mb-8 whitespace-pre-line leading-relaxed space-y-3">
+          <p>Korepetitorius patvirtina, kad sutinka laikytis šių paslaugų teikimo sąlygų:</p>
+          <ol className="list-decimal list-inside space-y-2">
+            <li>Korepetitorius įsipareigoja teikti kokybiškas ir laiku vykdomas mokymo paslaugas.</li>
+            <li>Paslaugų apimtis, trukmė ir kaina yra sutartinai nustatytos.</li>
+            <li>Ginčų atveju šalys sieks susitarti derybų būdu. Nepavykus, ginčas sprendžiamas Lietuvos Respublikos teisės aktų nustatyta tvarka.</li>
+            <li>Korepetitorius patvirtina, kad yra susipažinęs su visomis sąlygomis ir jas priima.</li>
+          </ol>
+          <p className="italic">(Sutarties tekstas gali būti papildytas ir koreguojamas pagal poreikį.)</p>
+        </div>
+
+        <label className="flex items-center space-x-3 mb-8 cursor-pointer select-none">
+          <input
+            type="checkbox"
+            checked={agreed}
+            onChange={() => setAgreed(!agreed)}
+            className="w-6 h-6 rounded border-gray-300 focus:ring-2 focus:ring-blue-600"
+          />
+          <span className="text-lg font-medium text-gray-800">Sutinku su paslaugų teikimo sutartimi</span>
+        </label>
+
+        <div className="flex justify-center">
+          <button
+            onClick={handleAgree}
+            disabled={!agreed}
+            className={`px-8 py-3 rounded-xl text-white font-semibold transition ${
+              agreed ? "bg-blue-600 hover:bg-blue-700" : "bg-blue-300 cursor-not-allowed"
+            }`}
+          >
+            Sutinku
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export default function TutorDashboard() {
   const router = useRouter();
@@ -47,9 +107,9 @@ export default function TutorDashboard() {
   const [availabilitySlots, setAvailabilitySlots] = useState<AvailabilitySlot[]>([]);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [notifLoading, setNotifLoading] = useState(false);
-
-  const [orders, setOrders] = useState<Booking[]>([]);
-  const [ordersLoading, setOrdersLoading] = useState(false);
+  const [lessons, setLessons] = useState<Lesson[]>([]);
+  const [bookings, setBookings] = useState<Booking[]>([]);
+  const [bookingsLoading, setBookingsLoading] = useState(false);
 
   // Check user agreement on mount
   useEffect(() => {
@@ -121,24 +181,24 @@ export default function TutorDashboard() {
       });
   }, [id]);
 
-  // Load orders for tutor
+  // Load lessons of tutor
   useEffect(() => {
     if (!id) return;
-    setOrdersLoading(true);
-    supabase
-      .from("bookings")
-      .select("id, student_name, student_email, student_phone, topic, created_at")
-      .eq("tutor_id", id)
-      .order("created_at", { ascending: false })
-      .then(({ data, error }) => {
-        if (error) {
-          console.error("Klaida gaunant užsakymus:", error.message);
-          setOrdersLoading(false);
-          return;
-        }
-        setOrders(data || []);
-        setOrdersLoading(false);
-      });
+    const fetchLessons = async () => {
+      const { data, error } = await supabase
+        .from("user_lessons")
+        .select(`lessons(id, name, slug)`)
+        .eq("user_id", id);
+
+      if (error) {
+        console.error("Klaida gaunant pamokas:", error.message);
+        return;
+      }
+
+      const lessonsArr: Lesson[] = (data ?? []).map((row) => row.lessons).filter(Boolean);
+      setLessons(lessonsArr);
+    };
+    fetchLessons();
   }, [id]);
 
   // Save availability slots reload
@@ -182,6 +242,26 @@ export default function TutorDashboard() {
         if (error) throw error;
 
         await handleSave();
+      }
+
+      if (isYes && notification.booking_id) {
+        // Fetch the specific booking by booking_id
+        const { data: bookingData, error: bookingError } = await supabase
+          .from("bookings")
+          .select("*")
+          .eq("id", notification.booking_id)
+          .single();
+
+        if (bookingError || !bookingData) {
+          console.error("Klaida gaunant užsakymą:", bookingError?.message);
+          return;
+        }
+
+        // Add booking to state if not already present
+        setBookings((prev) => {
+          if (prev.find((b) => b.id === bookingData.id)) return prev;
+          return [...prev, bookingData];
+        });
       }
 
       // Simulate sending emails
@@ -261,18 +341,24 @@ export default function TutorDashboard() {
             onClick={() => goTo("sf_form")}
             className="px-5 py-2 bg-blue-600 text-white rounded-lg shadow hover:bg-blue-700 transition"
           >
-            Išrašyti sąskaitą
+            Įrašyti sąskaitą
+          </button>
+          <button
+            onClick={() => goTo("add_lesson")}
+            className="px-5 py-2 bg-green-600 text-white rounded-lg shadow hover:bg-green-700 transition"
+          >
+            Pridėti pamoką
           </button>
           <button
             onClick={() => goTo("grades")}
-            className="px-5 py-2 bg-blue-600 text-white rounded-lg shadow hover:bg-blue-700 transition"
+            className="px-5 py-2 bg-yellow-600 text-white rounded-lg shadow hover:bg-yellow-700 transition"
           >
             Pridėti pažymį
           </button>
           <button
-            onClick={() => window.open("https://drive.google.com/drive/u/1/folders/1uBSRCUxunwWaXNIIeAWP8keY1O5wlzm7", "_blank")}
-            className="px-5 py-2 bg-blue-600 text-white rounded-lg shadow hover:bg-blue-700 transition"
-            >
+            onClick={() => goTo("resources")}
+            className="px-5 py-2 bg-purple-600 text-white rounded-lg shadow hover:bg-purple-700 transition"
+          >
             Resursai
           </button>
           <button
@@ -285,6 +371,48 @@ export default function TutorDashboard() {
       </header>
 
       <main className="flex-grow container mx-auto px-6 sm:px-10 py-10 space-y-10 max-w-7xl">
+        {/* Visos pamokos section - shows bookings grouped by lesson_slug */}
+        <section className="bg-white rounded-xl shadow-lg p-8">
+          <h2 className="text-2xl font-semibold mb-6 border-b pb-3">Visos pamokos</h2>
+
+          {bookingsLoading ? (
+            <p className="italic text-gray-500">Kraunama užsakymų informacija...</p>
+          ) : bookings.length === 0 ? (
+            <p className="text-gray-600 italic">Nėra užsakymų.</p>
+          ) : (
+            <ul className="space-y-4 max-h-[400px] overflow-y-auto">
+              {Object.entries(
+                bookings.reduce((acc, booking) => {
+                  acc[booking.lesson_slug] = acc[booking.lesson_slug] || [];
+                  acc[booking.lesson_slug].push(booking);
+                  return acc;
+                }, {} as Record<string, Booking[]>)
+              ).map(([lessonSlug, lessonBookings]) => (
+                <li
+                  key={lessonSlug}
+                  className="border rounded-md p-4 hover:shadow-md transition"
+                >
+                  <p className="font-semibold text-lg mb-3 capitalize">{lessonSlug.replace(/-/g, " ")}</p>
+                  <ul className="text-sm text-gray-700 space-y-2">
+                    {lessonBookings.map((b) => (
+                      <li key={b.id} className="border-t pt-2">
+                        <p>
+                          <strong>Studentas:</strong> {b.student_name} ({b.student_email})
+                        </p>
+                        {b.topic && <p><strong>Tema:</strong> {b.topic}</p>}
+                        <p><strong>Kaina:</strong> {b.total_price} €</p>
+                        <p className="text-xs text-gray-500">
+                          Užsakyta: {new Date(b.created_at).toLocaleString("lt-LT")}
+                        </p>
+                      </li>
+                    ))}
+                  </ul>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+
         <section className="bg-white rounded-xl shadow-lg p-8">
           <h2 className="text-2xl font-semibold mb-6 border-b pb-3 flex items-center justify-between">
             Pranešimai
@@ -326,89 +454,14 @@ export default function TutorDashboard() {
         </section>
 
         <section className="bg-white rounded-xl shadow-lg p-8">
-          <h2 className="text-2xl font-semibold mb-6 border-b pb-3">Užsakymai</h2>
-
-          {ordersLoading ? (
-            <p className="italic text-gray-500">Kraunama užsakymų informacija...</p>
-          ) : orders.length === 0 ? (
-            <p className="text-gray-600 italic">Nėra užsakymų.</p>
-          ) : (
-            <ul className="space-y-4 max-h-[400px] overflow-y-auto">
-              {orders.map((order) => (
-                <li key={order.id} className="border rounded-md p-4 hover:shadow-md transition">
-                  <p><strong>Vardas:</strong> {order.student_name}</p>
-                  <p><strong>El. paštas:</strong> {order.student_email}</p>
-                  <p><strong>Telefonas:</strong> {order.student_phone ?? "Nenurodytas"}</p>
-                  {order.topic && <p><strong>Tema:</strong> {order.topic}</p>}
-                  <p className="text-xs text-gray-500">Užsakyta: {new Date(order.created_at).toLocaleString("lt-LT")}</p>
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
-
-        <section className="bg-white rounded-xl shadow-lg p-8">
           <h2 className="text-2xl font-semibold mb-6 border-b pb-3">Prieinamumas</h2>
           <WeeklyAvailabilitySelector
-            //initialSlots={availabilitySlots}
-            //onSave={handleSave}
+            initialSlots={availabilitySlots}
+            onSave={handleSave}
             userId={id}
           />
         </section>
       </main>
-    </div>
-  );
-}
-
-function TermsPopup({ onAccept }: { onAccept: () => void }) {
-  const [agreed, setAgreed] = useState(false);
-
-  const handleAgree = () => {
-    if (!agreed) {
-      alert("Prašome sutikti su paslaugų teikimo sutartimi.");
-      return;
-    }
-    onAccept();
-  };
-
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center p-6 z-50">
-      <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full p-8 max-h-[80vh] overflow-y-auto">
-        <h2 className="text-3xl font-extrabold mb-6 text-center">Paslaugų teikimo sutartis</h2>
-
-        <div className="text-md text-gray-700 mb-8 whitespace-pre-line leading-relaxed space-y-3">
-          <p>Korepetitorius patvirtina, kad sutinka laikytis šių paslaugų teikimo sąlygų:</p>
-          <ol className="list-decimal list-inside space-y-2">
-            <li>Korepetitorius įsipareigoja teikti kokybiškas ir laiku vykdomas mokymo paslaugas.</li>
-            <li>Paslaugų apimtis, trukmė ir kaina yra sutartinai nustatytos.</li>
-            <li>Ginčų atveju šalys sieks susitarti derybų būdu. Nepavykus, ginčas sprendžiamas Lietuvos Respublikos teisės aktų nustatyta tvarka.</li>
-            <li>Korepetitorius patvirtina, kad yra susipažinęs su visomis sąlygomis ir jas priima.</li>
-          </ol>
-          <p className="italic">(Sutarties tekstas gali būti papildytas ir koreguojamas pagal poreikį.)</p>
-        </div>
-
-        <label className="flex items-center space-x-3 mb-8 cursor-pointer select-none">
-          <input
-            type="checkbox"
-            checked={agreed}
-            onChange={() => setAgreed(!agreed)}
-            className="w-6 h-6 rounded border-gray-300 focus:ring-2 focus:ring-blue-600"
-          />
-          <span className="text-lg font-medium text-gray-800">Sutinku su paslaugų teikimo sutartimi</span>
-        </label>
-
-        <div className="flex justify-center">
-          <button
-            onClick={handleAgree}
-            disabled={!agreed}
-            className={`px-8 py-3 rounded-xl text-white font-semibold transition ${
-              agreed ? "bg-blue-600 hover:bg-blue-700" : "bg-blue-300 cursor-not-allowed"
-            }`}
-          >
-            Sutinku
-          </button>
-        </div>
-      </div>
     </div>
   );
 }
